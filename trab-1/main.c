@@ -9,16 +9,16 @@ int main() {
 
     switch(func){
         case 1:
-            FILE *arquivoSaida = createTable(tipoArquivo, arquivoEntrada);
+            res = create_table(tipoArquivo, arquivoEntrada);
             break;
         case 2:
-            select(tipoArquivo, arquivoEntrada);
+            res = select(tipoArquivo, arquivoEntrada);
             break;
         case 3:
-            select_where(tipoArquivo, arquivoEntrada);
+            res = select_where(tipoArquivo, arquivoEntrada);
             break;
         case 4:
-            data_recovery(tipoArquivo, arquivoEntrada);
+            res = elect_rrn(tipoArquivo, arquivoEntrada);
             break;
         default:
             printf("Comando invalido! Deve estar entre 1 e 4\n");
