@@ -41,6 +41,66 @@ int create_header(FILE *output, char *fileType) {
     } else return 0; // Erro
 }
 
+// Lê todas as informações pedidas (de um registro dado o seu RRN) na ordem também pedida
+int leitura_rrn_tipo1(FILE *f, int RRN) {
+    int tmp, tam_marca, tam_modelo, tam_cidade;
+    char buffer1[100], buffer2[100];
+
+    // Para poder acessar corretamente os campos de tamanho variável
+    fseek(f, 182+(97*RRN)+19, SEEK_SET);
+    fread(tam_cidade, sizeof(int), 1, f);
+    fseek(f, 1+tam_cidade, SEEK_CUR);
+    fread(tam_marca, sizeof(int), 1, f);
+    fseek(f, 1+tam_marca, SEEK_CUR);
+    fread(tam_modelo, sizeof(int), 1, f);
+
+    // Marca
+    fseek(f, 136, SEEK_SET);
+    fread(buffer1, sizeof(char), 18, f);
+    buffer1[18] = '\0';
+    fseek(f, 182+(97*RRN)+29+tam_cidade, SEEK_SET);
+    fread(buffer2, sizeof(char), tam_marca, f);
+    buffer2[tam_marca] = '\0';
+    printf("%s%s\n", buffer1, buffer2);
+
+     // Modelo
+    fseek(f, 155, SEEK_SET);
+    fread(buffer, sizeof(char), 19, f);
+    buffer1[19] = '\0';
+    fseek(f, 182+(97*RRN)34+tam_cidade+tam_marca, SEEK_SET);
+    fread(buffer2, sizeof(char), tam_modelo, f);
+    buffer2[tam_modelo] = '\0';
+    printf("%s%s\n", buffer1, buffer2);
+
+    // Ano
+    fseek(f, 67, SEEK_SET);
+    fread(buffer1, sizeof(char), 19, f);
+    buffer1[19] = '\0';
+    fseek(f, 182+(97*RRN)+9, SEEK_SET);
+    fread(buffer2, sizeof(int), 1, f);
+    printf("%s%d\n", buffer1, tmp);
+
+    // Cidade
+    fseek(f, 119, SEEK_SET);
+    fread(buffer1, sizeof(char), 16, f);
+    buffer1[16] = '\0';
+    fseek(f, 182+(97*RRN)+24, SEEK_SET);
+    fread(buffer2, sizeof(char), tam_cidade, f);
+    buffer2[tam_cidade] = '\0';
+    printf("%s%s\n", buffer1, buffer2);
+
+    // Qtd de veículos
+    fseek(f, 86, SEEK_SET);
+    fread(buffer1, sizeof(char), 24, f);
+    buffer1[24] = '\0';
+    fseek(f, 182+(97*RRN)+13, SEEK_SET);
+    fread(buffer2, sizeof(int), 1, f);
+    printf("%s%d\n", buffer1, tmp);
+
+    printf("\n");
+    return 1;
+}
+
 int create_table(char *tipoArquivo, char *arquivoEntrada){
     char arquivoSaida[31];
     scanf("%s", arquivoSaida);
@@ -61,6 +121,19 @@ int select_where(char *tipoArquivo, char *arquivoEntrada){
     return 1;
 }
 
+// Funcionalidade [4]: Procurar um registro por seu RRN no arquivo e imprimir suas informações
 int select_rrn(char *tipoArquivo, char *arquivoEntrada){
+    if(strncmp(tipoArquivo, "tipo1", 5) != 0) return 0; // Erro (tipo errado)
+    FILE *input_file = fopen(arquivoEntrada, "rb");
+    if(input_file == NULL) return 0; // Erro (não há arquivo)
+
+    int RRN;
+    scanf("%d", &RRN);
+    fseek(input_file, 0, SEEK_END);
+    int ttl = (ftell(input_file) - 182) / 97; // Quantidade de registros
+    if(RRN >= ttl) return 0; // Erro (não há tal registro)
+
+    leitura_rrn_tipo1(input_file, RRN);
+    fclose(input_file);
     return 1;
 }
