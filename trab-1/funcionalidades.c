@@ -3,6 +3,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+int tratamento_de_lixo(char *str, int size) {
+    if(str == NULL) return 0; // Erro
+    for(int i = 0; i < size; i++) {
+        if(str[i] == '$') {
+            str[i] = '\0';
+            break;
+        }
+    }
+    return 1;
+}
+
 int create_header(FILE *output, char *fileType) {
     if(strncmp(fileType, "tipo1", 5) == 0) { // Registro de cabeçalho de 182 bytes
         fwrite("0", sizeof(char), 1, output); // status
@@ -43,33 +54,55 @@ int create_header(FILE *output, char *fileType) {
 
 // Lê todas as informações pedidas (de um registro dado o seu RRN) na ordem também pedida
 int leitura_rrn_tipo1(FILE *f, int RRN) {
-    int tmp, tam_marca, tam_modelo, tam_cidade;
+    int tmp, tam_marca, pos_marca, tam_modelo, pos_modelo, tam_cidade, pos_cidade;
     char buffer1[100], buffer2[100];
 
     // Para poder acessar corretamente os campos de tamanho variável
-    fseek(f, 182+(97*RRN)+19, SEEK_SET);
-    fread(tam_cidade, sizeof(int), 1, f);
-    fseek(f, 1+tam_cidade, SEEK_CUR);
-    fread(tam_marca, sizeof(int), 1, f);
-    fseek(f, 1+tam_marca, SEEK_CUR);
-    fread(tam_modelo, sizeof(int), 1, f);
+    tam_marca = tam_modelo = tam_cidade = -1;
+    fseek(f, 182+(97*RRN)+23, SEEK_SET);
+    fread(buffer1, sizeof(char), 1, f);
+    if(strncmp(buffer1, "0", 1) == 0) {
+        pos_cidade = ftell(f);
+        fseek(f, -5, SEEK_CUR);
+        fread(tam_cidade, sizeof(int), 1, f);
+        fseek(f, 5+tam_cidade, SEEK_CUR);
+        fread(buffer1, sizeof(char), 1, f);
+    }
+    if(strncmp(buffer1, "1", 1) == 0) {
+        pos_marca = ftell(f);
+        fseek(f, -5, SEEK_CUR);
+        fread(tam_marca, sizeof(int), 1, f);
+        fseek(f, 5+tam_marca, SEEK_CUR);
+        fread(buffer1, sizeof(char), 1, f);
+    }
+    if(strncmp(buffer1, "2", 1) == 0) {
+        pos_modelo = ftell(f);
+        fseek(f, -5, SEEK_CUR);
+        fread(tam_modelo, sizeof(int), 1, f);
+        fseek(f, 5+tam_modelo, SEEK_CUR);
+        fread(buffer1, sizeof(char), 1, f);
+    }
 
     // Marca
     fseek(f, 136, SEEK_SET);
     fread(buffer1, sizeof(char), 18, f);
     buffer1[18] = '\0';
-    fseek(f, 182+(97*RRN)+29+tam_cidade, SEEK_SET);
-    fread(buffer2, sizeof(char), tam_marca, f);
-    buffer2[tam_marca] = '\0';
+    if(tam_marca != -1) {
+        fseek(f, pos_marca, SEEK_SET);
+        fread(buffer2, sizeof(char), tam_marca, f);
+        tratamento_de_lixo(buffer2, tam_marca);
+    } else strcpy(buffer2, "NAO PREENCHIDO");
     printf("%s%s\n", buffer1, buffer2);
 
      // Modelo
     fseek(f, 155, SEEK_SET);
     fread(buffer, sizeof(char), 19, f);
     buffer1[19] = '\0';
-    fseek(f, 182+(97*RRN)34+tam_cidade+tam_marca, SEEK_SET);
-    fread(buffer2, sizeof(char), tam_modelo, f);
-    buffer2[tam_modelo] = '\0';
+    if(tam_modelo != -1) {
+        fseek(f, pos_modelo, SEEK_SET);
+        fread(buffer2, sizeof(char), tam_modelo, f);
+        tratamento_de_lixo(buffer2, tam_modelo);
+    } else strcpy(buffer2, "NAO PREENCHIDO");
     printf("%s%s\n", buffer1, buffer2);
 
     // Ano
@@ -84,9 +117,11 @@ int leitura_rrn_tipo1(FILE *f, int RRN) {
     fseek(f, 119, SEEK_SET);
     fread(buffer1, sizeof(char), 16, f);
     buffer1[16] = '\0';
-    fseek(f, 182+(97*RRN)+24, SEEK_SET);
-    fread(buffer2, sizeof(char), tam_cidade, f);
-    buffer2[tam_cidade] = '\0';
+    if(tam_cidade != -1) {
+        fseek(f, pos_cidade, SEEK_SET);
+        fread(buffer2, sizeof(char), tam_cidade, f);
+        tratamento_de_lixo(buffer2, tam_cidade);
+    } else strcpy(buffer2, "NAO PREENCHIDO");
     printf("%s%s\n", buffer1, buffer2);
 
     // Qtd de veículos
