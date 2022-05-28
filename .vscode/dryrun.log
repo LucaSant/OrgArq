@@ -1,0 +1,6 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/lhs/Desktop/codes/OrgArq'
+make: Leaving directory '/home/lhs/Desktop/codes/OrgArq'
+ 
+make: *** No targets specified and no makefile found.  Stop.
+
