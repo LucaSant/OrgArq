@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "../headers/funcoesFornecidas.h"
 
 void readline(char* string){
     char c = 0;
