@@ -1,6 +1,4 @@
 make all --print-data-base --no-builtin-variables --no-builtin-rules --question
-make: *** No rule to make target 'all'.  Stop.
-
 # GNU Make 4.2.1
 # Built for x86_64-pc-linux-gnu
 # Copyright (C) 1988-2016 Free Software Foundation, Inc.
@@ -8,7 +6,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Fri May 27 01:05:30 2022
+# Make data base, printed on Wed Jun  1 11:01:25 2022
 
 # Variables
 
@@ -41,7 +39,7 @@ GDMSESSION = cinnamon
 # default
 MAKE_VERSION := 4.2.1
 # makefile
-CURDIR := /home/lhs/Desktop/codes/OrgArq
+CURDIR := /home/lhs/Desktop/codes/org-arq
 # makefile
 SHELL = /bin/sh
 # environment
@@ -73,7 +71,7 @@ VSCODE_VERBOSE_LOGGING = true
 # environment
 LESSOPEN = | /usr/bin/lesspipe %s
 # environment
-VSCODE_CWD = /home/lhs/Desktop/codes/OrgArq
+VSCODE_CWD = /home/lhs/Desktop/codes
 # environment
 XDG_SESSION_PATH = /org/freedesktop/DisplayManager/Session0
 # default
@@ -83,7 +81,7 @@ PATH = /home/lhs/anaconda3/bin:/home/lhs/anaconda3/condabin:/home/lhs/.nvm/versi
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/mach2-mint:@/tmp/.ICE-unix/1092,unix/mach2-mint:/tmp/.ICE-unix/1092
+SESSION_MANAGER = local/mach2-mint:@/tmp/.ICE-unix/1077,unix/mach2-mint:/tmp/.ICE-unix/1077
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -113,7 +111,7 @@ CONDA_EXE = /home/lhs/anaconda3/bin/conda
 # environment
 VSCODE_PIPE_LOGGING = true
 # environment
-PWD = /home/lhs/Desktop/codes/OrgArq
+PWD = /home/lhs/Desktop/codes/org-arq
 # environment
 QT_QPA_PLATFORMTHEME = qt5ct
 # default
@@ -121,7 +119,7 @@ QT_QPA_PLATFORMTHEME = qt5ct
 # environment
 XDG_SEAT = seat0
 # environment
-SSH_AGENT_PID = 1181
+SSH_AGENT_PID = 1166
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = X-Cinnamon
 # environment
@@ -167,7 +165,7 @@ MAKECMDGOALS := all
 # environment
 SHLVL = 1
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-a5d23626-d4f1-4011-9906-d0197cff66b5.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-c0828329-fc0f-4107-8e65-9347248c91fc.sock
 # environment
 XDG_SESSION_ID = c2
 # environment
@@ -183,7 +181,7 @@ CONDA_SHLVL = 1
 # default
 MAKE_COMMAND := make
 # environment
-OLDPWD = /home/lhs/Desktop/codes
+OLDPWD = /home/lhs/Desktop
 # default
 .VARIABLES := 
 # automatic
@@ -209,6 +207,8 @@ GDK_BACKEND = x11
 # automatic
 +F = $(notdir $+)
 # environment
+NO_AT_BRIDGE = 1
+# environment
 CINNAMON_VERSION = 5.2.7
 # environment
 QT_ACCESSIBILITY = 1
@@ -225,11 +225,11 @@ CONDA_PYTHON_EXE = /home/lhs/anaconda3/bin/python
 # environment
 GJS_DEBUG_TOPICS = JS ERROR;JS LOG
 # environment
-GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/abce97a8_e04c_48ee_b945_bd26537d643b
+GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/f849ffef_b720_4856_b4ae_f40ae8661b50
 # automatic
 ^F = $(notdir $^)
 # environment
-GNOME_TERMINAL_SERVICE = :1.211
+GNOME_TERMINAL_SERVICE = :1.179
 # default
 SUFFIXES := 
 # environment
@@ -247,11 +247,11 @@ LANG = C
 # environment
 TERM = xterm-256color
 # environment
-VSCODE_PID = 3432
+VSCODE_PID = 3998
 # environment
 _CE_CONDA = 
 # variable set hash-table stats:
-# Load=119/1024=12%, Rehash=0, Collisions=12/141=9%
+# Load=120/1024=12%, Rehash=0, Collisions=12/142=8%
 
 # Pattern-specific Variable Values
 
@@ -259,9 +259,9 @@ _CE_CONDA =
 
 # Directories
 
-# . (device 55, inode 7209660): 10 files, no impossibilities.
+# . (device 55, inode 7865457): 7 files, no impossibilities.
 
-# 10 files, no impossibilities in 1 directories.
+# 7 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -287,9 +287,11 @@ Makefile:
 makefile:
 #  Implicit rule search has been done.
 #  File does not exist.
+ 
+make: *** No rule to make target 'all'.  Stop.
+
 #  File has been updated.
 #  Failed to be updated.
- 
 
 # Not a target:
 .DEFAULT:
@@ -312,12 +314,12 @@ GNUmakefile:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 18 / storage = 169 B / avg = 9 B
-# current buf: size = 8162 B / used = 169 B / count = 18 / avg = 9 B
+# strcache buffers: 1 (0) / strings = 15 / storage = 127 B / avg = 8 B
+# current buf: size = 8162 B / used = 127 B / count = 15 / avg = 8 B
 
-# strcache performance: lookups = 21 / hit rate = 14%
+# strcache performance: lookups = 18 / hit rate = 16%
 # hash-table stats:
-# Load=18/8192=0%, Rehash=0, Collisions=1/21=5%
-# Finished Make data base on Fri May 27 01:05:30 2022
+# Load=15/8192=0%, Rehash=0, Collisions=1/18=6%
+# Finished Make data base on Wed Jun  1 11:01:25 2022
 
  
