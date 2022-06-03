@@ -12,6 +12,7 @@
 #include "../headers/structs.h"
 #include "../headers/funcoesFornecidas.h"
 
+
 // Funcionalidade [1]: Ler registros a partir de um arquivo CSV e salvá-los em um arquivo binário tipo1 ou tipo2
 int csv_to_bin(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
@@ -19,15 +20,16 @@ int csv_to_bin(char *tipoArquivo, char *arquivoEntrada) {
 
     char arquivoSaida[31];
     scanf("%s", arquivoSaida);
-    FILE *input_file = fopen(arquivoEntrada, "r");
-    FILE *output_file = fopen(arquivoSaida, "wb+");
+    FILE *input_file = fopen(get_path(arquivoEntrada), "r");
+    FILE *output_file = fopen(get_path(arquivoSaida), "wb+");
 
     int header = create_header(output_file, fileType); // Cria cabeçalho do arquivo com base no tipo
     if(!header) return 0; // Erro
     data_reg(output_file, input_file, fileType); // Lê do .csv e  escreve os registros de dados
 
+    fclose(input_file);
     fclose(output_file);
-    binarioNaTela(arquivoSaida);
+    binarioNaTela(get_path(arquivoSaida));
     return 1;
 }
 
@@ -36,9 +38,12 @@ int read_all(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
     if(fileType == 0) return 0; // Erro (tipo errado)
 
-    FILE *input_file = fopen(arquivoEntrada, "rb");
-    if(input_file == NULL) return 0; // Erro (não há arquivo)
+    FILE *input_file = fopen(get_path(arquivoEntrada), "rb");
+    if(input_file == NULL) {
+        printf("errooooo\n");
+        return 0; // Erro (não há arquivo)
 
+    }
     char status[1];
     fread(status, sizeof(char), 1, input_file);
     if(strncmp(status, "1", 1) != 0) return 0; // Erro (arquivo inconsistente)
@@ -62,7 +67,7 @@ int read_filter(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
     if(fileType == 0) return 0; // Erro (tipo errado)
 
-    FILE *input_file = fopen(arquivoEntrada, "rb");
+    FILE *input_file = fopen(get_path(arquivoEntrada), "rb");
     if(input_file == NULL) return 0; // Erro (não há arquivo)
 
     char status[1];
@@ -100,7 +105,7 @@ int read_rrn(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
     if(fileType != 1) return 0; // Erro (tipo errado)
 
-    FILE *input_file = fopen(arquivoEntrada, "rb");
+    FILE *input_file = fopen(get_path(arquivoEntrada), "rb");
     if(input_file == NULL) return 0; // Erro (não há arquivo)
 
     char status[1];

@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include "../headers/funcionalidades.h"
+#include "../headers/auxiliares.h"
 
 int main() {
     int func, res; // Funcionalidade (1...4) e resultado (1 = Sucesso | 0 = Falha)

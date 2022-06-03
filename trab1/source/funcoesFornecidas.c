@@ -84,8 +84,4 @@ void scan_quote_string(char *str) {
 	} else { // EOF
 		strcpy(str, "");
 	}
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> ba9c950cf37f680a242a85ed1faf2d0287422f0f

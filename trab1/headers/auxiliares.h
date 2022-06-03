@@ -8,7 +8,7 @@
 #include "../headers/structs.h"
 
 // Funções auxiliares, que serão usadas pelas funcionalidades
-
+char *get_path(char *file);
 int get_tipo_arquivo(char *tipoArquivo);
 int tratamento_de_lixo(char *src, char *dest, int size);
 vehicle *cria_veiculo();

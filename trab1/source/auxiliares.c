@@ -11,6 +11,30 @@
 #include "../headers/auxiliares.h"
 #include "../headers/funcoesFornecidas.h"
 
+
+// Função que completa o path dos arquivos a serem abertos
+char *get_path(char *f){
+    char *path = malloc(35*sizeof(char));
+    char separator[3];
+    char folder[] = "arquivos";
+    #ifdef _WIN32 //se o sistema for windows
+        separator[0] = 92; // '\' em valor númerico
+        separator[1] = \0
+    #elif __linux__
+        strcpy(separator, "/"); //se for linux
+    #elif __APPLE__
+        strcpy(separator, ":"); //se for mac
+    #endif
+    // a final teremos (para linux): ./arquivos/file
+    strcpy(path, ".");
+    strcat(path, separator);
+    strcat(path, folder);
+    strcat(path, separator);
+    strcat(path, f);
+    return path;
+}
+
+//dá um inteiro para arquivos de tipos distintos
 int get_tipo_arquivo(char *tipoArquivo) {
     if(strncmp(tipoArquivo, "tipo1", 5) == 0) return 1;
     if(strncmp(tipoArquivo, "tipo2", 5) == 0) return 2;
@@ -334,75 +358,92 @@ int useful_reg_length(vehicle *reg, int fileType) {
     return reg_length;
 }
 
+void write_reg(FILE *file, int fileType, vehicle *vh){
+
+    int useful_length = useful_reg_length(vh, fileType);  // Calcula o tamanho do registro considerando os caracteres úteis
+    int length_trash = fileType == 1 ? (97 - useful_length) : 0; // Tamanho do campo relativo ao lixo
+    
+    long byte_offset;
+    int rrn;
+    //Busca o próximo byte_offset (ou RRN) dispónivel 
+    if(fileType == 1){
+        fseek(file, 174, SEEK_SET);
+        fread(&rrn, sizeof(int), 1, file);
+        byte_offset = (((long)rrn) * 97) + 182;
+    }else if(fileType == 2){
+        fseek(file, 178, SEEK_SET);
+        fread(&byte_offset, sizeof(long), 1, file);
+        if(byte_offset == 0){ byte_offset = 190; }
+    }
+    fseek(file, byte_offset, SEEK_SET);//vai o próximo byte offset disponível 
+
+    // ESCREVE NOS CAMPOS DE TAMANHO ÚTIL
+    char c = '0';
+    fwrite(&c, sizeof(char), 1, file); // STATUS
+    if(fileType == 1) {
+        int prox = (int) vh->prox;
+        fwrite(&prox, sizeof(int), 1, file); // Prox removido
+        fwrite(&vh->id, sizeof(int), 1, file); // ID
+        fwrite(&vh->ano, sizeof(int), 1, file); // ANO
+        fwrite(&vh->qtt, sizeof(int), 1, file); // QUANTIDADE
+        fwrite(vh->sigla, sizeof(char), 2, file); // SIGLA
+    } else if(fileType == 2) {
+        vh->tamanhoRegistro = useful_length - 5;
+        fwrite(&vh->tamanhoRegistro, sizeof(int), 1, file); // TAMANHO DO REGISTRO
+        fwrite(&vh->prox, sizeof(long int), 1, file); // Prox removido
+        fwrite(&vh->id, sizeof(int), 1, file); // ID
+        fwrite(&vh->ano, sizeof(int), 1, file); // ANO
+        fwrite(&vh->qtt, sizeof(int), 1, file); //QUANTIDADE
+        fwrite(vh->sigla, sizeof(char), 2, file); // SIGLA
+    }
+
+    // ESCREVE NOS CAMPOS DE TAMANHO VARIAVEL 
+    if(vh->tamCidade != -1) { 
+        c = '0';
+        fwrite(&vh->tamCidade, sizeof(int), 1, file); // TAMANHO CIDADE
+        fwrite(&c, sizeof(char), 1, file); // 0
+        fwrite(vh->cidade, sizeof(char), vh->tamCidade, file); // CIDADE
+    }
+    if(vh->tamMarca != -1) {
+        c = '1';
+        fwrite(&vh->tamMarca, sizeof(int), 1, file); // TAMANHO MARCA
+        fwrite(&c, sizeof(char), 1, file); //1
+        fwrite(vh->marca, sizeof(char), vh->tamMarca, file); // MARCA               
+    }
+    if(vh->tamModelo != -1) {
+        c = '2';
+        fwrite(&vh->tamModelo, sizeof(int), 1, file); // TAMANHO MODELO
+        fwrite(&c, sizeof(char), 1, file); //2
+        fwrite(vh->modelo, sizeof(char), vh->tamModelo, file); // MODELO
+    }
+    for(int i = 0; i < length_trash; i++) { // Para o tamanho do campo relativo ao lixo
+        c = '$';
+        fwrite(&c, sizeof(char), 1, file); // LIXO
+    }
+
+    // Atualiza o endereço para o próximo registro disponível para escrita 
+    // rrn (tipo1) ou byte_off (tipo2)
+    fseek(file, 0, SEEK_END);
+    byte_offset = ftell(file);
+    if(fileType == 1){ // tipo1
+        rrn = (int)(byte_offset - 182) / 97;
+        fseek(file, 174, SEEK_SET);
+        fwrite(&rrn, sizeof(int), 1,  file);
+    }else{ // tipo2
+        fseek(file, 178, SEEK_SET);
+        fwrite(&byte_offset, sizeof(long), 1 , file);
+    }
+    //fseek(file, 0, SEEK_END); // Retorna ao fim do arquivo para prosseguir com a escrita
+}
+
 // Lê do .csv e escreve os registros de dados no .bin
 void data_reg(FILE *output_file, FILE *input_file, int fileType) {
     char line[200]; 
     fgets(line, 200,  input_file);
-    long byte_offset;
-    int rrn;
     while(fgets(line, 200, input_file) != NULL) { // Lê uma linha por vez até o fim do arquivo
         
         vehicle *vh = parse_data(line); // Separa os dados da linha, armazena-os em um estrutura de dados
-        int useful_length = useful_reg_length(vh, fileType);  // Calcula o tamanho do registro considerando os caracteres úteis
-        int length_trash = fileType == 1 ? (97 - useful_length) : 0; // Tamanho do campo relativo ao lixo
-
-        // ESCREVE NOS CAMPOS DE TAMANHO ÚTIL
-        char c = '0';
-        fwrite(&c, sizeof(char), 1, output_file); // STATUS
-        if(fileType == 1) {
-            int prox = (int) vh->prox;
-            fwrite(&prox, sizeof(int), 1, output_file); // Prox removido
-            fwrite(&vh->id, sizeof(int), 1, output_file); // ID
-            fwrite(&vh->ano, sizeof(int), 1, output_file); // ANO
-            fwrite(&vh->qtt, sizeof(int), 1, output_file); // QUANTIDADE
-            fwrite(vh->sigla, sizeof(char), 2, output_file); // SIGLA
-        } else if(fileType == 2) {
-            vh->tamanhoRegistro = useful_length - 5;
-            fwrite(&vh->tamanhoRegistro, sizeof(int), 1, output_file); // TAMANHO DO REGISTRO
-            fwrite(&vh->prox, sizeof(long int), 1, output_file); // Prox removido
-            fwrite(&vh->id, sizeof(int), 1, output_file); // ID
-            fwrite(&vh->ano, sizeof(int), 1, output_file); // ANO
-            fwrite(&vh->qtt, sizeof(int), 1, output_file); //QUANTIDADE
-            fwrite(vh->sigla, sizeof(char), 2, output_file); // SIGLA
-        }
- 
-        // ESCREVE NOS CAMPOS DE TAMANHO VARIAVEL 
-        if(vh->tamCidade != -1) { 
-            c = '0';
-            fwrite(&vh->tamCidade, sizeof(int), 1, output_file); // TAMANHO CIDADE
-            fwrite(&c, sizeof(char), 1, output_file); // 0
-            fwrite(vh->cidade, sizeof(char), vh->tamCidade, output_file); // CIDADE
-        }
-        if(vh->tamMarca != -1) {
-            c = '1';
-            fwrite(&vh->tamMarca, sizeof(int), 1, output_file); // TAMANHO MARCA
-            fwrite(&c, sizeof(char), 1, output_file); //1
-            fwrite(vh->marca, sizeof(char), vh->tamMarca, output_file); // MARCA               
-        }
-        if(vh->tamModelo != -1) {
-            c = '2';
-            fwrite(&vh->tamModelo, sizeof(int), 1, output_file); // TAMANHO MODELO
-            fwrite(&c, sizeof(char), 1, output_file); //2
-            fwrite(vh->modelo, sizeof(char), vh->tamModelo, output_file); // MODELO
-        }
-        for(int i = 0; i < length_trash; i++) { // Para o tamanho do campo relativo ao lixo
-            c = '$';
-            fwrite(&c, sizeof(char), 1, output_file); // LIXO
-        }
-
-        // Atualiza o endereço para o próximo registro disponível para escrita 
-        // rrn (tipo1) ou byte_off (tipo2)
-        fseek(output_file, 0, SEEK_END);
-        byte_offset = ftell(output_file);
-        if(fileType == 1){ // tipo1
-            rrn = (int)(byte_offset - 182) / 97;
-            fseek(output_file, 174, SEEK_SET);
-            fwrite(&rrn, sizeof(int), 1,  output_file);
-        }else{ // tipo2
-            fseek(output_file, 178, SEEK_SET);
-            fwrite(&byte_offset, sizeof(long), 1 , output_file);
-        }
-        fseek(output_file, 0, SEEK_END); // Retorna ao fim do arquivo para prosseguir com a escrita
+        write_reg(output_file, fileType, vh);
     }
     //Antes de fechar o arquivo, atualiza o status para não comprometido (consistente)
     fseek(output_file, 0, SEEK_SET);
