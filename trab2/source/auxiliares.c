@@ -16,7 +16,8 @@
 char *get_path(char *f){
     char *path = malloc(35*sizeof(char));
     char separator[3];
-    char folder[] = "arquivos";
+    char folder1[] = "arquivos";
+    char folder2[] = "antes";
     #ifdef _WIN32 //se o sistema for windows
         separator[0] = 92; // '\' em valor númerico
         separator[1] = \0
@@ -25,10 +26,12 @@ char *get_path(char *f){
     #elif __APPLE__
         strcpy(separator, ":"); //se for mac
     #endif
-    // a final teremos (para linux): ./arquivos/file
+    // a final teremos (para linux): ./arquivos/antes/file
     strcpy(path, ".");
     strcat(path, separator);
-    strcat(path, folder);
+    strcat(path, folder1);
+    strcat(path, separator);
+    strcat(path, folder2);
     strcat(path, separator);
     strcat(path, f);
     return path;
@@ -213,19 +216,19 @@ int set_field(vehicle *vh, char *field_name, char *field_value) {
     } else if(strncmp(field_name, "codC5", 5) == 0) {
         strncpy(vh->codC5, field_value, 1);
     } else if(strncmp(field_name, "cidade", 6) == 0) {
-        strncpy(vh->cidade, &field_value[1], strlen(field_value)-2);
+        strncpy(vh->cidade, field_value, strlen(field_value));
     } else if(strncmp(field_name, "tamMarca", 8) == 0) {
         vh->tamMarca = atoi(field_value);
     } else if(strncmp(field_name, "codC6", 5) == 0) {
         strncpy(vh->codC6, field_value, 1);
     } else if(strncmp(field_name, "marca", 5) == 0) {
-        strncpy(vh->marca, &field_value[1], strlen(field_value)-2);
+        strncpy(vh->marca, &field_value[1], strlen(field_value));
     } else if(strncmp(field_name, "tamModelo", 9) == 0) {
         vh->tamModelo = atoi(field_value);
     } else if(strncmp(field_name, "codC7", 5) == 0) {
         strncpy(vh->codC7, field_value, 1);
     } else if(strncmp(field_name, "modelo", 6) == 0) {
-        strncpy(vh->modelo, &field_value[1], strlen(field_value)-2);
+        strncpy(vh->modelo, field_value, strlen(field_value));
     } else return 0; // Erro
     return 1;
 }
@@ -253,6 +256,23 @@ int filter_cmp(vehicle *filter, vehicle *reg) {
     if(strncmp(filter->modelo, "$", 1) != 0 && strncmp(filter->modelo, reg->modelo, strlen(filter->modelo)) != 0) return 0;
 
     return 1;
+}
+
+vehicle *field_to_struct() {
+    vehicle *vh = cria_veiculo();
+    char nomeCampo[31], valorCampo[51];
+    int x; // Número de campos
+    scanf("%d", &x);
+    for(int i = 0; i < x; i++) {
+        scanf("%s", nomeCampo);
+        scan_quote_string(valorCampo);
+        
+        set_field(vh, nomeCampo, valorCampo);
+
+        strcpy(nomeCampo, "");
+        strcpy(valorCampo, "");
+    }
+    return vh;
 }
 
 // Cria cabeçalho para função de escrita

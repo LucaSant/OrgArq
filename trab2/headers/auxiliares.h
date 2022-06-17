@@ -15,6 +15,7 @@ vehicle *cria_veiculo();
 void print_reg(vehicle *vh);
 vehicle *reg_to_struct(FILE *f, int fileType);
 int set_field(vehicle *vh, char *field_name, char *field_value);
+vehicle *field_to_struct();
 int filter_cmp(vehicle *filter, vehicle *reg);
 int struct_match(vehicle *est1, vehicle *est2);
 int create_header(FILE *output, int fileType);

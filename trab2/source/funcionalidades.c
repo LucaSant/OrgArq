@@ -73,15 +73,8 @@ int read_filter(char *tipoArquivo, char *arquivoEntrada) {
     char status[1];
     fread(status, sizeof(char), 1, input_file);
     if(strncmp(status, "1", 1) != 0) return 0; // Erro (arquivo inconsistente)
-
-    vehicle *filtro = cria_veiculo();
-    int n;
-    scanf("%d", &n);
-    char field_name[20], field_value[50];
-    for(int i = 0; i < n; i++) {
-        scanf("%s %[^\r\n]", field_name, field_value);
-        set_field(filtro, field_name, field_value);
-    }
+    
+    vehicle *filtro = field_to_struct(); // Cria veículo com info dos filtros de busca de campos
 
     fseek(input_file, 0, SEEK_END);
     long eof = ftell(input_file); // Byte offset no fim do arquivo
@@ -127,5 +120,79 @@ int read_rrn(char *tipoArquivo, char *arquivoEntrada) {
     print_reg(reg);
     free(reg);
     fclose(input_file);
+    return 1;
+}
+
+// Funcionalidade [5]: Criar arquivo de índice simples primário, campo de busca = id
+int create_index(char *tipoArquivo, char *arquivoEntrada) {
+    return 1;
+}
+
+// Funcionalidade [6]: Fazer remoção lógica de registro em arquivo seguindo abordagem dinâmica e Worst Fit
+int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
+    int fileType = get_tipo_arquivo(tipoArquivo);
+    char arquivoIndice[31];
+    int n; // Número de remoções
+    scanf("%s %d", arquivoIndice, &n);
+
+    FILE *data_file = fopen(get_path(arquivoEntrada), "wb");
+    FILE *index_file = fopen(get_path(arquivoIndice), "wb");
+    vehicle *filtro; // Filtro de busca
+
+    // Para cada remoção...
+    for(int i = 0; i < n; i++) {
+        filtro = field_to_struct();
+        // Para cada filtro, pesquisar no arquivo e fazer as devidas remoções
+        // ...
+        free(filtro);
+    }
+
+    fclose(data_file);
+    fclose(index_file);
+    return 1;
+}
+
+// Funcionalidade [7]: Fazer inserção de registro em arquivo seguindo abordagem dinâmica e Worst Fit
+int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
+    int fileType = get_tipo_arquivo(tipoArquivo);
+    char arquivoIndice[31];
+    int n; // Número de inserções
+    scanf("%s %d", arquivoIndice, &n);
+
+    FILE *data_file = fopen(get_path(arquivoEntrada), "wb");
+    FILE *index_file = fopen(get_path(arquivoIndice), "wb");
+    vehicle *vh; // Contém info do registro a ser inserido
+
+    // Para cada inserção...
+    for(int i = 0; i < n; i++) {
+        vh = field_to_struct();
+        // Fazer a inserção do veículo no arquivo
+        // ...
+        free(vh);
+    }
+    return 1;
+}
+
+// Funcionalidade [8]: Fazer atualização de registros em arquivo seguindo abordagem dinâmica
+int update_reg(char *tipoArquivo, char *arquivoEntrada) {
+    int fileType = get_tipo_arquivo(tipoArquivo);
+    char arquivoIndice[31];
+    int n; // Número de atualizações
+    scanf("%s %d", arquivoIndice, &n);
+
+    FILE *data_file = fopen(get_path(arquivoEntrada), "wb");
+    FILE *index_file = fopen(get_path(arquivoIndice), "wb");
+    vehicle *filtro; // Filtro de busca
+    vehicle *updt; // Contém campos a se atualizar no vetor (IMPORTANTE: DEVE CONTABILIZAR VALORES NULOS!!! <- como fazer isso?)
+
+    // Para cada atualização...
+    for(int i = 0; i < n; i++) {
+        filtro = field_to_struct();
+        updt = field_to_struct();
+        // Pesquisar no arquivo e fazer as devidas atualizações
+        // ...
+        free(filtro);
+        free(updt);
+    }
     return 1;
 }
