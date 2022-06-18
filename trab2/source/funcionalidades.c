@@ -131,6 +131,7 @@ int create_index(char *tipoArquivo, char *arquivoEntrada) {
 // Funcionalidade [6]: Fazer remoção lógica de registro em arquivo seguindo abordagem dinâmica e Worst Fit
 int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
+    int regSize = fileType == 1 ? 182 : 190;
     char arquivoIndice[31];
     int n; // Número de remoções
     scanf("%s %d", arquivoIndice, &n);
@@ -143,7 +144,25 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
     for(int i = 0; i < n; i++) {
         filtro = field_to_struct();
         // Para cada filtro, pesquisar no arquivo e fazer as devidas remoções
-        // ...
+        if(filtro->id != -1) { // Busca usando arquivo de índice
+            // ...
+        } else { // Busca linear no próprio arquivo de dados
+            fseek(data_file, 0, SEEK_END);
+            long eof = ftell(data_file); // Byte offset no fim do arquivo
+            fseek(data_file, regSize, SEEK_SET);
+            vehicle *vh;
+
+            while(ftell(data_file) < eof) {
+                vh = reg_to_struct(data_file, fileType);
+                // Se registro não está logicamente removido e condiz com filtro, faz sua remoção
+                if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "1", 1) != 0) {
+                    fseek(data_file, -regSize, SEEK_CUR);
+                    long address = fileType == 1 ? (long) ((ftell(data_file) - 182) / 97) : ftell(data_file);
+                    rem_register(data_file, index_file, fileType, address);
+                }
+                free(vh);
+            }
+        }
         free(filtro);
     }
 

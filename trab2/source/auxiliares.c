@@ -275,6 +275,67 @@ vehicle *field_to_struct() {
     return vh;
 }
 
+// Procura posição na pilha de removidos para o "novo registro removido".
+long find_stack_position(FILE *data, long regOffset, int regSize) {
+    long address, prevAddress;
+    int size;
+    fseek(data, 1, SEEK_SET);
+    fread(&address, sizeof(long), 1, data);
+    if(address != -1) {
+        do {
+            prevAddress = address;
+            fseek(data, address+1, SEEK_SET);
+            fread(&size, sizeof(int), 1, data);
+            fread(&address, sizeof(long), 1, data);
+        } while(address != -1 && size > regSize);
+        return prevAddress; // Reg. imediatamente superior à posição do "novo registro"
+    } else return -1; // Pilha vazia
+}
+
+// Remove um registro de um arquivo de dados e de índice
+int rem_register(FILE *data, FILE *index, int fileType, long regAddress) {
+    int aux;
+
+    // Remove logicamente registro no arquivo de dados e atualiza a pilha de removidos
+    fwrite("1", sizeof(char), 1, data);
+    if(fileType == 1) {
+        int rrn = (int) regAddress;
+
+        // Vai ao cabeçalho, guarda topo da pilha e atualiza-o
+        fseek(data, 1, SEEK_SET);
+        fread(&aux, sizeof(int), 1, data); // Antigo topo
+        fseek(data, 1, SEEK_SET);
+        fwrite(&rrn, sizeof(int), 1, data);
+
+        // Próximo RRN no registro em questão é o antigo topo
+        fseek(data, 182 + (97 * rrn) + 1, SEEK_SET);
+        fwrite(&aux, sizeof(int), 1, data);
+
+    } else if(fileType == 2) {
+        fread(&aux, sizeof(int), 1, data); // Tamanho do registro
+
+        // Pega a posição do registro imediatamente anterior ao reg. em questão na pilha
+        long position = find_stack_position(data, regAddress, aux);
+        if(position == -1) { // Reg. em questão vai no topo da pilha
+            fseek(data, 1, SEEK_SET);
+        } else {
+            fseek(data, position+5, SEEK_SET);
+        }
+
+        // Guarda posição do registro imediatamente posterior ao reg. em questão na pilha
+        fread(&position, sizeof(long), 1, data);
+        // Insere reg. em questão na pilha de removidos
+        fseek(data, -8, SEEK_CUR);
+        fwrite(&regAddress, sizeof(long), 1, data);
+        fseek(data, regAddress+5, SEEK_SET);
+        fwrite(&position, sizeof(long), 1, data); // -1 (fim) ou offset do próximo registro removido
+    }
+
+    // Atualiza o arquivo de índice
+    //...
+    return 1;
+}
+
 // Cria cabeçalho para função de escrita
 int create_header(FILE *output, int fileType) {
     long var_long = -1;
