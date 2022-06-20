@@ -197,40 +197,110 @@ vehicle *reg_to_struct(FILE *f, int fileType) {
 // Altera um campo específico de um veículo
 int set_field(vehicle *vh, char *field_name, char *field_value) {
     assert(vh != NULL && field_name != NULL && field_value != NULL);
+    int nulo = strncmp(field_value, "NULO", 4) == 0 ? 1 : 0;
+
     if(strncmp(field_name, "removido", 8) == 0) {
-        strncpy(vh->removido, field_value, 1);
+        if(nulo) strncpy(vh->removido, "#", 1);
+        else strncpy(vh->removido, field_value, 1);
+
     } else if(strncmp(field_name, "tamanhoRegistro", 15) == 0) {
-        vh->tamanhoRegistro = atoi(field_value);
+        if(nulo) vh->tamanhoRegistro = -2;
+        else vh->tamanhoRegistro = atoi(field_value);
+
     } else if(strncmp(field_name, "prox", 4) == 0) {
-        vh->prox = atol(field_value);
+        if(nulo) vh->prox = -2;
+        else vh->prox = atol(field_value);
+
     } else if(strncmp(field_name, "id", 2) == 0) {
-        vh->id = atoi(field_value);
+        if(nulo) vh->id = -2;
+        else vh->id = atoi(field_value);
+
     } else if(strncmp(field_name, "ano", 3) == 0) {
-        vh->ano = atoi(field_value);
+        if(nulo) vh->ano = -2;
+        else vh->ano = atoi(field_value);
+
     } else if(strncmp(field_name, "qtt", 3) == 0) {
-        vh->qtt = atoi(field_value);
+        if(nulo) vh->qtt = -2;
+        else vh->qtt = atoi(field_value);
+
     } else if(strncmp(field_name, "sigla", 5) == 0) {
-        strncpy(vh->sigla, field_value, 2);
+       if(nulo) strncpy(vh->sigla, "#", 1);
+        else strncpy(vh->sigla, field_value, 2);
+
     } else if(strncmp(field_name, "tamCidade", 9) == 0) {
-        vh->tamCidade = atoi(field_value);
+        if(nulo) vh->tamCidade = -2;
+        else vh->tamCidade = atoi(field_value);
+
     } else if(strncmp(field_name, "codC5", 5) == 0) {
-        strncpy(vh->codC5, field_value, 1);
+        if(nulo) strncpy(vh->codC5, "#", 1);
+        else strncpy(vh->codC5, field_value, 1);
+
     } else if(strncmp(field_name, "cidade", 6) == 0) {
-        strncpy(vh->cidade, field_value, strlen(field_value));
+        if(nulo) strncpy(vh->cidade, "#", 1);
+        else strncpy(vh->cidade, field_value, strlen(field_value));
+
     } else if(strncmp(field_name, "tamMarca", 8) == 0) {
-        vh->tamMarca = atoi(field_value);
+        if(nulo) vh->tamMarca = -2;
+        else vh->tamMarca = atoi(field_value);
+
     } else if(strncmp(field_name, "codC6", 5) == 0) {
-        strncpy(vh->codC6, field_value, 1);
+        if(nulo) strncpy(vh->codC6, "#", 1);
+        else strncpy(vh->codC6, field_value, 1);
+
     } else if(strncmp(field_name, "marca", 5) == 0) {
-        strncpy(vh->marca, &field_value[1], strlen(field_value));
+        if(nulo) strncpy(vh->marca, "#", 1);
+        else strncpy(vh->marca, field_value, strlen(field_value));
+
     } else if(strncmp(field_name, "tamModelo", 9) == 0) {
-        vh->tamModelo = atoi(field_value);
+        if(nulo) vh->tamModelo = -2;
+        else vh->tamModelo = atoi(field_value);
+
     } else if(strncmp(field_name, "codC7", 5) == 0) {
-        strncpy(vh->codC7, field_value, 1);
+        if(nulo) strncpy(vh->codC7, "#", 1);
+        else strncpy(vh->codC7, field_value, 1);
+
     } else if(strncmp(field_name, "modelo", 6) == 0) {
-        strncpy(vh->modelo, field_value, strlen(field_value));
+        if(nulo) strncpy(vh->modelo, "#", 1);
+        else strncpy(vh->modelo, field_value, strlen(field_value));
+
     } else return 0; // Erro
     return 1;
+}
+
+// Cria um struct veículo com informações do input de acordo com funcionalidade [7]
+vehicle *vh_from_input() {
+    char field_name[31], field_value[31];
+    vehicle *vh = cria_veiculo();
+    
+    scan_quote_string(field_value);
+    strcpy(field_name, "id");
+    set_field(vh, field_name, field_value);
+
+    scan_quote_string(field_value);
+    strcpy(field_name, "ano");
+    set_field(vh, field_name, field_value);
+
+    scan_quote_string(field_value);
+    strcpy(field_name, "qtt");
+    set_field(vh, field_name, field_value);
+
+    scan_quote_string(field_value);
+    strcpy(field_name, "sigla");
+    set_field(vh, field_name, field_value);
+
+    scan_quote_string(field_value);
+    strcpy(field_name, "cidade");
+    set_field(vh, field_name, field_value);
+
+    scan_quote_string(field_value);
+    strcpy(field_name, "marca");
+    set_field(vh, field_name, field_value);
+    
+    scan_quote_string(field_value);
+    strcpy(field_name, "modelo");
+    set_field(vh, field_name, field_value);
+
+    return vh;
 }
 
 // Compara conteúdo de certos campos de um registro, de acordo com um filtro também guardado como struct vehicle
@@ -258,6 +328,103 @@ int filter_cmp(vehicle *filter, vehicle *reg) {
     return 1;
 }
 
+// Atualiza o conteúdo de um struct veículo com base num struct de valores atualizados
+int update_vehicle(vehicle *vh, vehicle *update, int fileType) {
+    assert(vh != NULL && update != NULL);
+
+    // Faz as devidas alterações
+
+    if(strncmp(update->removido, "$", 1) != 0) {
+        if(strncmp(update->removido, "#", 1) == 0) strncpy(vh->removido, "$", 1);
+        else strncpy(vh->removido, update->removido, 1);
+    }
+    if(update->prox != -1) {
+        if(update->prox == -2) vh->prox = -1;
+        else vh->prox = update->prox;
+    }
+    if(update->id != -1) {
+        if(update->id == -2) vh->id = -1;
+        else vh->id = update->id;
+    }
+    if(update->ano != -1) {
+        if(update->ano == -2) vh->ano = -1;
+        else vh->ano = update->ano;
+    }
+    if(update->qtt != -1) {
+        if(update->qtt == -2) vh->qtt = -1;
+        else vh->qtt = update->qtt;
+    }
+    if(strncmp(update->sigla, "$$", 2) != 0) {
+        if(strncmp(update->sigla, "#", 1) == 0) strncpy(vh->sigla, "$$", 2);
+        else strncpy(vh->sigla, update->sigla, 2);
+    }
+    if(update->tamCidade != -1) {
+        if(update->tamCidade == -2) vh->tamCidade = -1;
+        else vh->tamCidade = update->tamCidade;
+    }
+    if(strncmp(update->codC5, "$", 1) != 0) {
+        if(strncmp(update->codC5, "#", 1) == 0) strncpy(vh->codC5, "$", 1);
+        else strncpy(vh->codC5, update->codC5, 1);
+    }
+    if(strncmp(update->cidade, "$", 1) != 0) {
+        if(strncmp(update->cidade, "#", 1) == 0) strncpy(vh->cidade, "$", 1);
+        else strncpy(vh->cidade, update->cidade, strlen(update->cidade));
+    }
+    if(update->tamMarca != -1) {
+        if(update->tamMarca == -2) vh->tamMarca = -1;
+        else vh->tamMarca = update->tamMarca;
+    }
+    if(strncmp(update->codC6, "$", 1) != 0) {
+        if(strncmp(update->codC6, "#", 1) == 0) strncpy(vh->codC6, "$", 1);
+        else strncpy(vh->codC6, update->codC6, 1);
+    }
+    if(strncmp(update->marca, "$", 1) != 0) {
+        if(strncmp(update->marca, "#", 1) == 0) strncpy(vh->marca, "$", 1);
+        else strncpy(vh->marca, update->marca, strlen(update->marca));
+    }
+    if(update->tamModelo != -1) {
+        if(update->tamModelo == -2) vh->tamModelo = -1;
+        else vh->tamModelo = update->tamModelo;
+    }
+    if(strncmp(update->codC7, "$", 1) != 0) {
+        if(strncmp(update->codC7, "#", 1) == 0) strncpy(vh->codC7, "$", 1);
+        else strncpy(vh->codC7, update->codC7, 1);
+    }
+    if(strncmp(update->modelo, "$", 1) != 0) {
+        if(strncmp(update->modelo, "#", 1) == 0) strncpy(vh->modelo, "$", 1);
+        else strncpy(vh->modelo, update->modelo, strlen(update->modelo));
+    }
+
+    // Conserta quaisquer inconsistências
+    if(strncmp(vh->cidade, "$", 1) == 0) {
+        strncpy(vh->codC5, "$", 1);
+        vh->tamCidade = -1;
+    } else {
+        strncpy(vh->codC5, "0", 1);
+        vh->tamCidade = strlen(vh->cidade);
+    }
+    if(strncmp(vh->marca, "$", 1) == 0) {
+        strncpy(vh->codC6, "$", 1);
+        vh->tamMarca = -1;
+    } else {
+        strncpy(vh->codC6, "1", 1);
+        vh->tamMarca = strlen(vh->marca);
+    }
+    if(strncmp(vh->modelo, "$", 1) == 0) {
+        strncpy(vh->codC7, "$", 1);
+        vh->tamModelo = -1;
+    } else {
+        strncpy(vh->codC7, "2", 1);
+        vh->tamModelo = strlen(vh->modelo);
+    }
+    int len = useful_reg_length(vh, fileType);
+    if(fileType == 1 && len > 97) return 0; // Erro (tamanho maior que possível)
+    vh->tamanhoRegistro = fileType == 1 ? 97 : len;
+    
+    return 1;
+}
+
+// Cria um struct veículo e preenche-o com base no input em uma linha
 vehicle *field_to_struct() {
     vehicle *vh = cria_veiculo();
     char nomeCampo[31], valorCampo[51];
@@ -276,7 +443,7 @@ vehicle *field_to_struct() {
 }
 
 // Procura posição na pilha de removidos para o "novo registro removido".
-long find_stack_position(FILE *data, long regOffset, int regSize) {
+long find_removed_stack_position(FILE *data, long regOffset, int regSize) {
     long address, prevAddress;
     int size;
     fseek(data, 1, SEEK_SET);
@@ -293,13 +460,13 @@ long find_stack_position(FILE *data, long regOffset, int regSize) {
 }
 
 // Remove um registro de um arquivo de dados e de índice
-int rem_register(FILE *data, FILE *index, int fileType, long regAddress) {
+int rem_register(FILE *data, FILE *index, int fileType, long offset) {
     int aux;
 
     // Remove logicamente registro no arquivo de dados e atualiza a pilha de removidos
     fwrite("1", sizeof(char), 1, data);
     if(fileType == 1) {
-        int rrn = (int) regAddress;
+        int rrn = (int) ((offset - 182) / 97);
 
         // Vai ao cabeçalho, guarda topo da pilha e atualiza-o
         fseek(data, 1, SEEK_SET);
@@ -315,7 +482,7 @@ int rem_register(FILE *data, FILE *index, int fileType, long regAddress) {
         fread(&aux, sizeof(int), 1, data); // Tamanho do registro
 
         // Pega a posição do registro imediatamente anterior ao reg. em questão na pilha
-        long position = find_stack_position(data, regAddress, aux);
+        long position = find_removed_stack_position(data, offset, aux);
         if(position == -1) { // Reg. em questão vai no topo da pilha
             fseek(data, 1, SEEK_SET);
         } else {
@@ -326,13 +493,87 @@ int rem_register(FILE *data, FILE *index, int fileType, long regAddress) {
         fread(&position, sizeof(long), 1, data);
         // Insere reg. em questão na pilha de removidos
         fseek(data, -8, SEEK_CUR);
-        fwrite(&regAddress, sizeof(long), 1, data);
-        fseek(data, regAddress+5, SEEK_SET);
+        fwrite(&offset, sizeof(long), 1, data);
+        fseek(data, offset+5, SEEK_SET);
         fwrite(&position, sizeof(long), 1, data); // -1 (fim) ou offset do próximo registro removido
     }
 
     // Atualiza o arquivo de índice
     //...
+    return 1;
+}
+
+// Procura posição na pilha de removidos para adicionar o novo registro
+long find_added_stack_position(FILE *data, int fileType) {
+    fseek(data, 1, SEEK_SET);
+    if(fileType == 1) {
+        int rrn;
+        fread(&rrn, sizeof(int), 1, data);
+        return (long) (rrn);
+    } else if(fileType == 2) {
+        long offset;
+        fread(&offset, sizeof(long), 1, data);
+        return offset;
+    }
+}
+
+// Adiciona um registro em um arquivo de dados (no offset indicado) e no arquivo de índice
+int add_register(vehicle *vh, FILE *data, FILE *index, int fileType, long offset) {
+    int size = 97; // Tamanho do registro tipo1. Caso tipo2, valor será sobrescrito
+    fseek(data, 0, SEEK_END);
+    long eof = ftell(data);
+    if(eof != offset) fseek(data, offset, SEEK_SET); 
+
+    // Escreve registro no offset indicado
+    fwrite("0", sizeof(char), 1, data); // removido
+
+    // Essa seção do registro varia a depender to tipo de arquivo
+    if(fileType == 1) {
+        int aux = (int) vh->prox;
+        fwrite(&aux, sizeof(int), 1, data); // prox       
+    } else if(fileType == 2) {
+        if(eof != offset) { // Estará sobrescrevendo um registro removido
+            fseek(data, 1, SEEK_CUR);
+            fread(&size, sizeof(int), 1, data); // Tamanho do antigo registro
+            fseek(data, offset, SEEK_SET);
+        } else size = vh->tamanhoRegistro;
+
+        int aux = (int) vh->tamanhoRegistro;
+        fwrite(&aux, sizeof(int), 1, data); // tamanhoRegistro
+        fwrite(&vh->prox, sizeof(long), 1, data); // prox
+    }
+
+    // Comportamento comum aos dois tipos de arquivo
+    fwrite(&vh->id, sizeof(int), 1, data); // id
+    fwrite(&vh->ano, sizeof(int), 1, data); // ano
+    fwrite(&vh->qtt, sizeof(int), 1, data); // qtt
+    fwrite(&vh->sigla, sizeof(char), 2, data); // sigla
+    if(vh->tamCidade > 0) {
+        fwrite(&vh->tamCidade, sizeof(int), 1, data); // tamCidade
+        fwrite(&vh->codC5, sizeof(char), 1, data); // codC5
+        fwrite(&vh->cidade, sizeof(char), strlen(vh->cidade), data); // cidade
+    }
+    if(vh->tamMarca > 0) {
+        fwrite(&vh->tamMarca, sizeof(int), 1, data); // tamMarca
+        fwrite(&vh->codC6, sizeof(char), 1, data); // codC6
+        fwrite(&vh->marca, sizeof(char), strlen(vh->marca), data); // marca
+    }
+    if(vh->tamModelo > 0) {
+        fwrite(&vh->tamModelo, sizeof(int), 1, data); // tamModelo
+        fwrite(&vh->codC7, sizeof(char), 1, data); // codC7
+        fwrite(&vh->modelo, sizeof(char), strlen(vh->modelo), data); // modelo
+    }
+    // Adiciona lixo ao fim do registro, se necessário
+    for(long i = ftell(data); i < offset + size; i++) {
+        fwrite("$", sizeof(char), 1, data);
+    }
+
+    // Atualiza o cabeçalho, se necessário
+    // ...
+
+    // Atualiza o arquivo de índice
+    //...
+    
     return 1;
 }
 
@@ -428,9 +669,7 @@ vehicle *parse_data(char *line) {
 
 // Calcula o tamanho total do registro sem considerar o lixo (no final do registro)
 int useful_reg_length(vehicle *reg, int fileType) {
-    int reg_length;
-    if(fileType == 1) reg_length = 19;
-    else if(fileType == 2) reg_length = 27;
+    int reg_length = fileType == 1 ? 19 : 27;
 
     // Verifica se os campos de tamanho váriaveis existem
     if(reg->tamCidade != -1) reg_length = reg_length + reg->tamCidade + 5; // +5 relativo aos campos tamX e codCY
@@ -451,10 +690,10 @@ void write_reg(FILE *file, int fileType, vehicle *vh){
         fseek(file, 174, SEEK_SET);
         fread(&rrn, sizeof(int), 1, file);
         byte_offset = (((long)rrn) * 97) + 182;
-    }else if(fileType == 2){
+    } else if(fileType == 2) {
         fseek(file, 178, SEEK_SET);
         fread(&byte_offset, sizeof(long), 1, file);
-        if(byte_offset == 0){ byte_offset = 190; }
+        if(byte_offset == 0) byte_offset = 190;
     }
     fseek(file, byte_offset, SEEK_SET);//vai o próximo byte offset disponível 
 
