@@ -26,4 +26,10 @@ typedef struct vehicle {
     char modelo[50];
 } vehicle;
 
+typedef struct table {
+    int id;
+    int rrn;
+    long byte_offset;
+} table;
+
 #endif //STRUCTS_H

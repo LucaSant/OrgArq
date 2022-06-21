@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../headers/auxiliares.h"
+#include "../headers/index_aux.h"
 #include "../headers/funcionalidades.h"
 #include "../headers/structs.h"
 #include "../headers/funcoesFornecidas.h"
@@ -123,10 +124,42 @@ int read_rrn(char *tipoArquivo, char *arquivoEntrada) {
     return 1;
 }
 
-// Funcionalidade [5]: Criar arquivo de índice simples primário, campo de busca = id
-int create_index(char *tipoArquivo, char *arquivoEntrada) {
+// Funcionalidade [5]: Crie um arquivo de índice sobre um arquivo de dados de entrada - o campo de busca: id
+int create_index(char *tipoArquivo, char* arquivoEntrada){
     int fileType = get_tipo_arquivo(tipoArquivo);
-    if(fileType == 0) return 0; // Ero (tipo errado)
+    if(fileType == 0) return 0; // Erro (tipo errado)
+
+    //Leitura do nome do arquivo de índice
+    char arquivoIndex[31];
+    scanf("%s", arquivoIndex);
+
+    //Abre os arquivos que serão usados no processo
+    FILE *data_file = fopen(get_path(arquivoEntrada), "rb"); //o arquivos com os registros
+    FILE *index_file = fopen(get_path(arquivoIndex), "wb"); //cria o arquivo de índces
+    
+    //Lê o status do arquivo de dados e escreve no arquivo de index
+    char status;
+    fseek(data_file, 0, SEEK_SET);
+    fread(&status, sizeof(char), 1, data_file);
+    fwrite(&status, sizeof(char), 1, index_file); 
+
+    //Define o ponto final do arquivo de registros permitindo percorre-lo 
+    fseek(data_file, 0, SEEK_END);
+    long eof = ftell(data_file); // Byte offset no fim do arquivo
+    if(fileType == 1) fseek(data_file, 182, SEEK_SET);
+    else fseek(data_file, 190, SEEK_SET);
+   
+    table *idx; // estrutura que guarda os dados do index
+    while(ftell(data_file) < eof) { // percorre todo o arquivo de ragistros 
+        idx = reg_to_table(data_file, fileType); // retorna um estrutura com o id e campo de endereço do registro
+        if(idx != NULL) {
+            write_index(index_file, fileType, idx); // escreve os dados no arquivo de index
+            free(idx);
+        }
+    }
+    fclose(data_file);
+    fclose(index_file);
+
     return 1;
 }
 
