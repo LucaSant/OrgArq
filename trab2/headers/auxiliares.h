@@ -21,7 +21,7 @@ int update_vehicle(vehicle *vh, vehicle *update, int fileType);
 vehicle *field_to_struct();
 long find_removed_stack_position(FILE *data, long regOffset, int regSize);
 int rem_register(FILE *data, FILE *index, int fileType, long regAddress);
-long find_added_stack_position(FILE *data, int fileType);
+long find_added_stack_position(FILE *data, int tamReg, int fileType);
 int add_register(vehicle *vh, FILE *data, FILE *index, int fileType, long offset);
 int create_header(FILE *output, int fileType);
 char *get_token(char **ptr);
