@@ -41,9 +41,7 @@ int read_all(char *tipoArquivo, char *arquivoEntrada) {
 
     FILE *input_file = fopen(get_path(arquivoEntrada), "rb");
     if(input_file == NULL) {
-        printf("errooooo\n");
         return 0; // Erro (não há arquivo)
-
     }
     char status[1];
     fread(status, sizeof(char), 1, input_file);
@@ -233,7 +231,8 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
     // Para cada inserção...
     for(int i = 0; i < n; i++) {
         vh = vh_from_input(); // Adquire informações do registro com input
-        offset = find_added_stack_position(data_file, fileType);
+        vh->tamanhoRegistro = useful_reg_length(vh, fileType); // calcula o tamanho do registro
+        offset = find_added_stack_position(data_file, vh->tamanhoRegistro, fileType);
         if(fileType == 1) offset = (offset * 97) + 182; // De RRN para byte offset
         add_register(vh, data_file, fileType, offset); // Insere o registro    
         free(vh);
@@ -258,7 +257,7 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
 // Funcionalidade [8]: Fazer atualização de registros em arquivo seguindo abordagem dinâmica
 int update_reg(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
-    if(fileType == 0) return 0; // Ero (tipo errado)
+    if(fileType == 0) return 0; // Erro (tipo errado)
 
     int headerSize = fileType == 1 ? 182 : 190;
     char arquivoIndice[31];
