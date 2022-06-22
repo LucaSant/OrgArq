@@ -26,10 +26,16 @@ typedef struct vehicle {
     char modelo[50];
 } vehicle;
 
-typedef struct table {
+typedef struct index {
     int id;
     int rrn;
     long byte_offset;
-} table;
+    index *prox;
+} index;
+
+typedef struct index_list {
+    index *head;
+    int size;
+} indlist;
 
 #endif //STRUCTS_H

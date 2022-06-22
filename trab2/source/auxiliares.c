@@ -460,8 +460,8 @@ long find_removed_stack_position(FILE *data, long regOffset, int regSize) {
     } else return -1; // Pilha vazia
 }
 
-// Remove um registro de um arquivo de dados e de índice
-int rem_register(FILE *data, FILE *index, int fileType, long offset) {
+// Remove um registro de um arquivo de dados
+int rem_register(FILE *data, int fileType, long offset) {
     int aux;
 
     // Remove logicamente registro no arquivo de dados e atualiza a pilha de removidos
@@ -499,8 +499,6 @@ int rem_register(FILE *data, FILE *index, int fileType, long offset) {
         fwrite(&position, sizeof(long), 1, data); // -1 (fim) ou offset do próximo registro removido
     }
 
-    // Atualiza o arquivo de índice
-    //...
     return 1;
 }
 
@@ -518,8 +516,8 @@ long find_added_stack_position(FILE *data, int fileType) {
     }
 }
 
-// Adiciona um registro em um arquivo de dados (no offset indicado) e no arquivo de índice
-int add_register(vehicle *vh, FILE *data, FILE *index, int fileType, long offset) {
+// Adiciona um registro em um arquivo de dados (no offset indicado)
+int add_register(vehicle *vh, FILE *data, int fileType, long offset) {
     int size = 97; // Tamanho do registro tipo1. Caso tipo2, valor será sobrescrito
     int rm_rrn; // Proximo rrn do registro removido 
     long rm_offset; // Proximo byte offset do registro removido
@@ -608,10 +606,30 @@ int add_register(vehicle *vh, FILE *data, FILE *index, int fileType, long offset
             fwrite(&num_rm, sizeof(int), 1, data);
         }
     }
-
-    // Atualiza o arquivo de índice
-    //...
     
+    return 1;
+}
+
+int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long offset, long eof) {
+    int regSize = vh->tamanhoRegistro; // Tamanho do registro antes de atualizar
+    update_vehicle(vh, updt, fileType);
+    if(fileType == 2) { // Registros de tamanho variável
+        if(vh->tamanhoRegistro > regSize) {
+            // Necessário marcar o registro antigo como removido e inserir o atualizado em nova posição
+            rem_register(data_file, fileType, offset);
+
+            // Checar se existe registro removido que comporte o tamanho. Senão, inserir no fim do arquivo
+            offset = find_added_stack_position(data_file, fileType);
+            fseek(data_file, offset+1, SEEK_SET);
+            fread(&regSize, sizeof(int), 1, data_file);
+            if(vh->tamanhoRegistro > regSize) offset = eof;
+        } else {
+            // Caso o novo registro seja menor que o anterior, ajustar tamanho para fins de tratamento de lixo
+            vh->tamanhoRegistro = regSize; // Guarda valor do registro anterior, maior que o novo
+        }
+    }
+    // Irá (a) sobrescrever o registro antigo, (b) sobrescrever outro registro removido ou (c) ser escrito no final
+    add_register(vh, data_file, fileType, offset);
     return 1;
 }
 
@@ -806,4 +824,166 @@ void data_reg(FILE *output_file, FILE *input_file, int fileType) {
     //Antes de fechar o arquivo, atualiza o status para não comprometido (consistente)
     fseek(output_file, 0, SEEK_SET);
     fwrite("1", sizeof(char), 1, output_file);
+}
+
+// Lê um arquivo de dados e passa as informações de seus registros para um array (de arquivo de índice)
+index **data_to_mem(FILE *data_file, int fileType) {
+    fseek(data_file, 0, SEEK_END);
+    long eof = ftell(data_file); // Byte offset do im do arquivo
+    int headerSize = fileType == 1 ? 182 : 190;
+
+    // Essa lista encadeada servirá para passar os índices para memória com uma única travessia pelo arquivo
+    indlist *ilist = (indlist*)malloc(sizeof(indlist));
+    ilist->head = NULL;
+    ilist->size = 0; // Quantidade de registros
+    
+    index *aux, *lowest, *ant = NULL;
+    char removido;
+    int rrn, id, regSize = 97;
+    long offset;
+    
+    // Percorre o arquivo de dados
+    fseek(data_file, headerSize, SEEK_SET);
+    while(ftell(data_file) != eof) {
+        offset = ftell(data_file);
+        if(fileType == 1) rrn = (int) ((offset-headerSize) / regSize);
+
+        fread(&removido, sizeof(char), 1, data_file);
+        if(fileType == 2) {
+            fread(&regSize, sizeof(int), 1, data_file);
+            regSize += 5;
+        }
+        if(removido == '0') { // Adiciona um índice à lista
+            aux = (index*)malloc(sizeof(index));
+            if(ant != NULL) ant->prox = aux;
+            if(ilist->head == NULL) ilist->head = aux;
+            ilist->size += 1;
+
+            if(fileType == 1) {
+                aux->rrn = rrn;
+                fseek(data_file, 4, SEEK_CUR); // Pula campo "prox"
+            } else {
+                aux->byte_offset = offset;
+                fseek(data_file, 8, SEEK_CUR); // Pula campo "prox"
+            } 
+            fread(&id, sizeof(int), 1, data_file);
+            aux->id = id;
+            aux->prox = NULL;
+
+            ant = aux;
+        }
+        fseek(data_file, offset+regSize, SEEK_SET);
+    }
+    
+    // Tratamento de erro
+    if(ilist->size <= 0) {
+        printf("Não há registros para criar a lista de indice!\n");
+        while(ilist->head != NULL) {
+            aux = ilist->head;
+            ilist->head = ilist->head->prox;
+            free(aux);
+        }
+        free(ilist);
+        return NULL;
+    }
+
+    // Agora, podemos ordenar a lista encadeada em um array de structs index
+    index **iarr = (index**)malloc((ilist->size) * sizeof(index*));
+    int i = 0;
+    while(ilist->size > 0) {
+        aux = lowest = ilist->head; // lowest guardará o menor índice, aux percorrerá a lista encadeada
+        ant = NULL;
+        while(aux->prox != NULL) {
+            if(aux->prox->id < lowest->id) {
+                lowest = aux->prox;
+                ant = aux;
+            }
+            aux = aux->prox;
+        }
+        // Remove da lista encadeada e insere no array
+        if(ant) ant->prox = lowest->prox;
+        else ilist->head = lowest->prox; // Menor índice está no início da lista encadeada
+        ilist->size -= 1;
+        iarr[i] = lowest;
+        i++;
+    }
+    free(ilist);
+    return iarr; // Array com todos os structs index que estavam na lista encadeada, agora ordenados
+}
+
+// Lê um arquivo de índice e passa as informações de seus registros para um array
+index **index_to_mem(FILE *index_file, int fileType) {
+    fseek(index_file, 0, SEEK_END);
+    long eof = ftell(index_file); // Byte offset do im do arquivo
+    int ttl = fileType == 1 ? (int) ((eof-1) / 8) : (int) ((eof-1) / 12); // Número de índices
+    assert(ttl > 0);
+
+    long lAux;
+    int aux;
+    index **ind = (index**)malloc(ttl * sizeof(index*));
+
+    fseek(index_file, 1, SEEK_SET);
+    for(int i = 0; i < ttl; i++) {
+        ind[i] = (index*)malloc(sizeof(index));
+        
+        fread(&aux, sizeof(int), 1, index_file);
+        ind[i]->id = aux;
+
+        if(fileType == 1) {
+            fread(&aux, sizeof(int), 1, index_file);
+            ind[i]->rrn = aux;
+        } else {
+            fread(&lAux, sizeof(long), 1, index_file);
+            ind[i]->byte_offset = lAux;
+        }
+    }
+    
+    return ind; // Supõe-se que o array já está ordenado, por vir de um arquivo de índice
+}
+
+// Escreve num arquivo de índice os índices num array ordenados por ID
+int mem_to_index(char *arquivoIndice, index **iarr, int fileType) {
+    FILE *index_file = fopen(get_path(arquivoIndice), "wb+");
+    int ttl = (int) (sizeof(iarr) / sizeof(index));
+    
+    // Cabeçalho
+    fwrite("0", sizeof(char), 1, index_file);
+
+    // Registros
+    for(int i = 0; i < ttl; i++) {
+        fwrite(&(iarr[i]->id), sizeof(int), 1, index_file);
+        if(fileType == 1) {
+            fwrite(&(iarr[i]->rrn), sizeof(int), 1, index_file);
+        } else {
+            fwrite(&(iarr[i]->byte_offset), sizeof(long), 1, index_file);
+        }
+        free(iarr[i]);
+    }
+
+    // Termina de limpar o array da memória e fecha tudo
+    free(iarr);
+    fseek(index_file, 0, SEEK_SET);
+    fwrite("1", sizeof(char), 1, index_file); // Integridade
+    fclose(index_file);
+    return 1;
+}
+
+// Função recursiva para busca binária de registros utilizando seus índices como parâmetro
+long index_binary_search(index **iarr, int l, int r, int id, int fileType) {
+    if(r < l) return -1; // Índice não existe
+    int m = (int) ((r + l) / 2);
+    if(iarr[m]->id == id) { // Achou índice
+        if(fileType = 1) return (long) ((iarr[m]->rrn * 97) + 182); // RRN para offset
+        else return iarr[m]->byte_offset;
+    }
+    if(iarr[m]->id > id) return index_binary_search(iarr, l, m-1, id, fileType); // Índice é menor
+    return index_binary_search(iarr, m+1, r, id, fileType); // Índice é maior
+}
+
+void destroy_iarr(index **iarr) {
+    int ttl = (int) (sizeof(iarr) / sizeof(index));
+    for(int i = 0; i < ttl; i++) {
+        free(iarr[i]);
+    }
+    free(iarr);
 }

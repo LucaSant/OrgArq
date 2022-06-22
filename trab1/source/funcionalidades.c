@@ -125,6 +125,7 @@ int read_rrn(char *tipoArquivo, char *arquivoEntrada) {
     vehicle *reg = reg_to_struct(input_file, fileType);
     
     print_reg(reg);
+    if(strncmp(reg->removido, "0", 1) != 0) printf("Registro inexistente.\n");
     free(reg);
     fclose(input_file);
     return 1;
