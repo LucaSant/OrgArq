@@ -72,7 +72,7 @@ void scan_quote_string(char *str) {
 
 	if(R == 'N' || R == 'n') { // campo NULO
 		getchar(); getchar(); getchar(); // ignorar o "ULO" de NULO.
-		strcpy(str, ""); // copia string vazia
+		strcpy(str, "NULO"); // copia string 
 	} else if(R == '\"') {
 		if(scanf("%[^\"]", str) != 1) { // ler até o fechamento das aspas
 			strcpy(str, "");
