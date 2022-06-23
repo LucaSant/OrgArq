@@ -134,7 +134,7 @@ int create_index(char *tipoArquivo, char* arquivoEntrada){
     fwrite("0", sizeof(char), 1, data_file); // Consistência
     
     // Passa as informações para a memória e depois escreve-as num arquivo de índice
-    index **arr = data_to_mem(data_file, fileType);
+    _index **arr = data_to_mem(data_file, fileType);
     mem_to_index(arquivoIndice, arr, fileType);
     
     fseek(data_file, 0, SEEK_SET);
@@ -162,8 +162,8 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
 
     vehicle *filtro; // Filtro de busca
     // Para busca binária
-    index **arr = index_to_mem(index_file, fileType);
-    int ttl = (int) (sizeof(arr) / sizeof(index));
+    _index **arr = index_to_mem(index_file, fileType);
+    int ttl = (int) (sizeof(arr) / sizeof(_index));
     long eof, offset;
     
 
@@ -195,7 +195,7 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
         free(filtro);
     }
     // Atualiza o arquivo de índice
-    destroy(arr);
+    destroy_iarr(arr);
     fseek(index_file, 0, SEEK_SET);
     fwrite("1", sizeof(char), 1, index_file); // Consistência
     fclose(index_file);
@@ -242,7 +242,7 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
     fseek(index_file, 0, SEEK_SET);
     fwrite("1", sizeof(char), 1, index_file); // Consistência
     fclose(index_file);
-    index **arr = data_to_mem(data_file, fileType);
+    _index **arr = data_to_mem(data_file, fileType);
     mem_to_index(arquivoIndice, arr, fileType);
 
     fseek(data_file, 0, SEEK_SET);
@@ -272,8 +272,8 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
     vehicle *filtro; // Filtro de busca
     vehicle *updt; // Contém campos a se atualizar no vetor
     // Para busca binária
-    index **arr = index_to_mem(index_file, fileType);
-    int ttl = (int) (sizeof(arr) / sizeof(index));
+    _index **arr = index_to_mem(index_file, fileType);
+    int ttl = (int) (sizeof(arr) / sizeof(_index));
     long eof, offset;
 
     // Para cada atualização...

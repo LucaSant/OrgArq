@@ -9,7 +9,7 @@
 #include <string.h>
 #include "../headers/index_aux.h"
 
-
+/*
 void write_index(FILE *index_file, int fileType, table *idx) {
     fwrite(&idx->id, sizeof(int), 1, index_file);
     if(fileType == 1){
@@ -18,7 +18,8 @@ void write_index(FILE *index_file, int fileType, table *idx) {
         fwrite(&idx->byte_offset, sizeof(long), 1, index_file);
     }
 }
-
+*/
+/*
 table *reg_to_table(FILE *data_file, int fileType) {
     table *idx = (table*)malloc(sizeof(table));
     int tam, aux; //tamanho: define tamanho do registro | aux: variável auxiliar para leitura do arquivo
@@ -48,3 +49,4 @@ table *reg_to_table(FILE *data_file, int fileType) {
         return NULL;
     }
 }
+*/

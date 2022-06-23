@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include "../headers/structs.h"
-
-void write_index(FILE *index_file, int fileType, table *idx);
-table *reg_to_table(FILE *datafile, int fileType);
+/*
+void write_index(FILE *index_file, int fileType, _index *idx);
+_index *reg_to_table(FILE *datafile, int fileType);
+*/

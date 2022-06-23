@@ -868,7 +868,7 @@ void data_reg(FILE *output_file, FILE *input_file, int fileType) {
 }
 
 // Lê um arquivo de dados e passa as informações de seus registros para um array (de arquivo de índice)
-index **data_to_mem(FILE *data_file, int fileType) {
+_index **data_to_mem(FILE *data_file, int fileType) {
     fseek(data_file, 0, SEEK_END);
     long eof = ftell(data_file); // Byte offset do im do arquivo
     int headerSize = fileType == 1 ? 182 : 190;
@@ -878,7 +878,7 @@ index **data_to_mem(FILE *data_file, int fileType) {
     ilist->head = NULL;
     ilist->size = 0; // Quantidade de registros
     
-    index *aux, *lowest, *ant = NULL;
+    _index *aux, *lowest, *ant = NULL;
     char removido;
     int rrn, id, regSize = 97;
     long offset;
@@ -895,7 +895,7 @@ index **data_to_mem(FILE *data_file, int fileType) {
             regSize += 5;
         }
         if(removido == '0') { // Adiciona um índice à lista
-            aux = (index*)malloc(sizeof(index));
+            aux = (_index*)malloc(sizeof(_index));
             if(ant != NULL) ant->prox = aux;
             if(ilist->head == NULL) ilist->head = aux;
             ilist->size += 1;
@@ -929,7 +929,7 @@ index **data_to_mem(FILE *data_file, int fileType) {
     }
 
     // Agora, podemos ordenar a lista encadeada em um array de structs index
-    index **iarr = (index**)malloc((ilist->size) * sizeof(index*));
+    _index **iarr = (_index**)malloc((ilist->size) * sizeof(_index*));
     int i = 0;
     while(ilist->size > 0) {
         aux = lowest = ilist->head; // lowest guardará o menor índice, aux percorrerá a lista encadeada
@@ -953,7 +953,7 @@ index **data_to_mem(FILE *data_file, int fileType) {
 }
 
 // Lê um arquivo de índice e passa as informações de seus registros para um array
-index **index_to_mem(FILE *index_file, int fileType) {
+_index **index_to_mem(FILE *index_file, int fileType) {
     fseek(index_file, 0, SEEK_END);
     long eof = ftell(index_file); // Byte offset do im do arquivo
     int ttl = fileType == 1 ? (int) ((eof-1) / 8) : (int) ((eof-1) / 12); // Número de índices
@@ -961,11 +961,11 @@ index **index_to_mem(FILE *index_file, int fileType) {
 
     long lAux;
     int aux;
-    index **ind = (index**)malloc(ttl * sizeof(index*));
+    _index **ind = (_index**)malloc(ttl * sizeof(_index*));
 
     fseek(index_file, 1, SEEK_SET);
     for(int i = 0; i < ttl; i++) {
-        ind[i] = (index*)malloc(sizeof(index));
+        ind[i] = (_index*)malloc(sizeof(_index));
         
         fread(&aux, sizeof(int), 1, index_file);
         ind[i]->id = aux;
@@ -983,9 +983,9 @@ index **index_to_mem(FILE *index_file, int fileType) {
 }
 
 // Escreve num arquivo de índice os índices num array ordenados por ID
-int mem_to_index(char *arquivoIndice, index **iarr, int fileType) {
+int mem_to_index(char *arquivoIndice, _index **iarr, int fileType) {
     FILE *index_file = fopen(get_path(arquivoIndice), "wb+");
-    int ttl = (int) (sizeof(iarr) / sizeof(index));
+    int ttl = (int) (sizeof(iarr) / sizeof(_index));
     
     // Cabeçalho
     fwrite("0", sizeof(char), 1, index_file);
@@ -1010,7 +1010,7 @@ int mem_to_index(char *arquivoIndice, index **iarr, int fileType) {
 }
 
 // Função recursiva para busca binária de registros utilizando seus índices como parâmetro
-long index_binary_search(index **iarr, int l, int r, int id, int fileType) {
+long index_binary_search(_index **iarr, int l, int r, int id, int fileType) {
     if(r < l) return -1; // Índice não existe
     int m = (int) ((r + l) / 2);
     if(iarr[m]->id == id) { // Achou índice
@@ -1021,8 +1021,8 @@ long index_binary_search(index **iarr, int l, int r, int id, int fileType) {
     return index_binary_search(iarr, m+1, r, id, fileType); // Índice é maior
 }
 
-void destroy_iarr(index **iarr) {
-    int ttl = (int) (sizeof(iarr) / sizeof(index));
+void destroy_iarr(_index **iarr) {
+    int ttl = (int) (sizeof(iarr) / sizeof(_index));
     for(int i = 0; i < ttl; i++) {
         free(iarr[i]);
     }
