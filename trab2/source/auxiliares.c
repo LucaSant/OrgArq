@@ -870,7 +870,7 @@ void data_reg(FILE *output_file, FILE *input_file, int fileType) {
 // Lê um arquivo de dados e passa as informações de seus registros para um array (de arquivo de índice)
 _index **data_to_mem(FILE *data_file, int fileType) {
     fseek(data_file, 0, SEEK_END);
-    long eof = ftell(data_file); // Byte offset do im do arquivo
+    long eof = ftell(data_file); // Byte offset do fim do arquivo
     int headerSize = fileType == 1 ? 182 : 190;
 
     // Essa lista encadeada servirá para passar os índices para memória com uma única travessia pelo arquivo
@@ -890,6 +890,7 @@ _index **data_to_mem(FILE *data_file, int fileType) {
         if(fileType == 1) rrn = (int) ((offset-headerSize) / regSize);
 
         fread(&removido, sizeof(char), 1, data_file);
+        
         if(fileType == 2) {
             fread(&regSize, sizeof(int), 1, data_file);
             regSize += 5;
@@ -928,7 +929,7 @@ _index **data_to_mem(FILE *data_file, int fileType) {
         return NULL;
     }
 
-    // Agora, podemos ordenar a lista encadeada em um array de structs index
+    // Agora, podemos ordenar a lista encadeada em um array de structs _index
     _index **iarr = (_index**)malloc((ilist->size) * sizeof(_index*));
     int i = 0;
     while(ilist->size > 0) {
@@ -985,17 +986,27 @@ _index **index_to_mem(FILE *index_file, int fileType) {
 // Escreve num arquivo de índice os índices num array ordenados por ID
 int mem_to_index(char *arquivoIndice, _index **iarr, int fileType) {
     FILE *index_file = fopen(get_path(arquivoIndice), "wb+");
-    int ttl = (int) (sizeof(iarr) / sizeof(_index));
-    
+    size_t ttl =  sizeof(iarr) / sizeof(iarr[0]); // NÃO DÁ O RESULTADO CERTO
+    /*
+    printf("tamanho iarr: %d\n", ((int) sizeof(iarr)));
+    printf("primeiro elemento: id: %d, rrn: %d\n", iarr[0]->id, iarr[0]->rrn);
+    printf("tamanho do 0: %d\n", (int) sizeof(iarr[0]));
+    printf("tamanho do 1: %d\n", (int) sizeof(iarr[1]));
+    printf("tamanho do 2: %d\n", (int) sizeof(iarr[2]));
+    printf("ttl: %ld\n", ttl);
+    */
     // Cabeçalho
     fwrite("0", sizeof(char), 1, index_file);
 
     // Registros
     for(int i = 0; i < ttl; i++) {
+        printf("ID: %d, ", iarr[i]->id);
         fwrite(&(iarr[i]->id), sizeof(int), 1, index_file);
         if(fileType == 1) {
+            printf("RRN: %d\n", iarr[i]->rrn); // TESTE
             fwrite(&(iarr[i]->rrn), sizeof(int), 1, index_file);
         } else {
+            printf("Byte Offset: %ld\n", iarr[i]->byte_offset); // TESTE
             fwrite(&(iarr[i]->byte_offset), sizeof(long), 1, index_file);
         }
         free(iarr[i]);
