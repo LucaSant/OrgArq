@@ -165,7 +165,6 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
     // Para busca binária
     int num_ind = 0;
     _index **arr = index_to_mem(index_file, fileType, &num_ind);
-    int ttl = num_ind;
     long eof, offset = 0;
     
 
@@ -175,7 +174,7 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
         // Para cada filtro, pesquisar no arquivo e fazer as devidas remoções
         if(filtro->id != -1) { // Busca usando arquivo de índice
             //printf("id: %d\n", filtro->id);
-            offset = index_binary_search(arr, 0, ttl-1, filtro->id, fileType);
+            offset = index_binary_search(arr, 0, num_ind-1, filtro->id, fileType);
             //fseek(data_file, offset, SEEK_SET);
             //printf("offset: %ld \n", offset);
             if(offset != -1){
@@ -209,11 +208,13 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
         }
         free(filtro);
     }
-    // Atualiza o arquivo de índice
-    destroy_iarr(arr);
+
+    // Limpa o que for necessário e tualiza o arquivo de índice
+    destroy_iarr(arr, num_ind);
     fseek(index_file, 0, SEEK_SET);
     fwrite("1", sizeof(char), 1, index_file); // Consistência
     fclose(index_file);
+
     num_ind = 0;
     arr = data_to_mem(data_file, fileType, &num_ind);
     mem_to_index(arquivoIndice, arr, fileType, num_ind);
@@ -254,10 +255,11 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
         free(vh);
     }
 
-    // Atualiza o arquivo de índice
+    // Limpa o que for necessário e tualiza o arquivo de índice
     fseek(index_file, 0, SEEK_SET);
     fwrite("1", sizeof(char), 1, index_file); // Consistência
     fclose(index_file);
+
     int num_ind = 0;
     _index **arr = data_to_mem(data_file, fileType, &num_ind);
     mem_to_index(arquivoIndice, arr, fileType, num_ind);
@@ -288,10 +290,10 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
 
     vehicle *filtro; // Filtro de busca
     vehicle *updt; // Contém campos a se atualizar no vetor
+    indlist *updated_regs = create_upd_list(); // Contém endereços dos registros atualizados
     // Para busca binária
     int num_ind = 0;
     _index **arr = index_to_mem(index_file, fileType, &num_ind);
-    int ttl = num_ind;
     long eof, offset;
 
     // Para cada atualização...
@@ -302,12 +304,12 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
         
         // Para cada filtro, pesquisar no arquivo e fazer as devidas atualizações
         if(filtro->id != -1) { // Busca usando arquivo de índice
-            offset = index_binary_search(arr, 0, ttl-1, filtro->id, fileType);
+            offset = index_binary_search(arr, 0, num_ind-1, filtro->id, fileType);
             if(offset != -1){
                 fseek(data_file, offset, SEEK_SET);
                 vh = reg_to_struct(data_file, fileType);
-                if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "1", 1) != 0) {
-                    upd_register(vh, updt, data_file, fileType, offset, eof);
+                if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "0", 1) == 0) {
+                    upd_register(vh, updt, data_file, fileType, offset, eof, updated_regs);
                 }
                 free(vh);
             }
@@ -318,12 +320,11 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
             fseek(data_file, headerSize, SEEK_SET);
 
             while(ftell(data_file) < eof) {
-                printf("oi\n");
                 offset = ftell(data_file);
                 vh = reg_to_struct(data_file, fileType);
                 // Se registro não está logicamente removido e condiz com filtro, faz sua atualização
                 if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "1", 1) != 0) {
-                    upd_register(vh, updt, data_file, fileType, offset, eof);
+                    upd_register(vh, updt, data_file, fileType, offset, eof, updated_regs);
                 }
                 free(vh);
             }
@@ -332,11 +333,14 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
         free(updt);
     }
 
-    // Atualiza o arquivo de índice
-    destroy_iarr(arr);
+    // Limpa/corrige o que for necessário e atualiza o arquivo de índice
+    int correct_upd_regs(indlist *upd, FILE *data_file);
+
+    destroy_iarr(arr, num_ind);
     fseek(index_file, 0, SEEK_SET);
     fwrite("1", sizeof(char), 1, index_file); // Consistência
     fclose(index_file);
+
     num_ind = 0;
     arr = data_to_mem(data_file, fileType, &num_ind);
     mem_to_index(arquivoIndice, arr, fileType, num_ind);

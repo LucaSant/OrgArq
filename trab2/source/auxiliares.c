@@ -367,7 +367,9 @@ int update_vehicle(vehicle *vh, vehicle *update, int fileType) {
 
     if(strncmp(update->removido, "$", 1) != 0) {
         if(strncmp(update->removido, "#", 1) == 0) strncpy(vh->removido, "$", 1);
-        else strncpy(vh->removido, update->removido, 1);
+        // Caractere especial para marcar registro atualizado durante a execução da função
+        // Serve para evitar que registros sejam atualizados múltiplas vezes, erroneamente
+        else strncpy(vh->removido, "2", 1); 
     }
     if(update->prox != -1) {
         if(update->prox == -2) vh->prox = -1;
@@ -677,7 +679,8 @@ int add_register(vehicle *vh, FILE *data, int fileType, long offset) {
     return 1;
 }
 
-int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long offset, long eof) {
+int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long offset, long eof, indlist *updated_regs) {
+    long oldOffset = offset;
     int regSize = vh->tamanhoRegistro; // Tamanho do registro antes de atualizar
     update_vehicle(vh, updt, fileType);
     if(fileType == 2) { // Registros de tamanho variável
@@ -687,10 +690,6 @@ int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long
 
             // Checar se existe registro removido que comporte o tamanho. Senão, inserir no fim do arquivo
             offset = find_added_stack_position(data_file, vh->tamanhoRegistro, fileType);
-            //a função find_added... lida com tudo isso abaixo
-            //fseek(data_file, offset+1, SEEK_SET);
-            //fread(&regSize, sizeof(int), 1, data_file);
-            //if(vh->tamanhoRegistro > regSize) offset = eof;
         } else {
             // Caso o novo registro seja menor que o anterior, ajustar tamanho para fins de tratamento de lixo
             vh->tamanhoRegistro = regSize; // Guarda valor do registro anterior, maior que o novo
@@ -698,6 +697,9 @@ int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long
     }
     // Irá (a) sobrescrever o registro antigo, (b) sobrescrever outro registro removido ou (c) ser escrito no final
     add_register(vh, data_file, fileType, offset);
+    push_upd_list(updated_regs, offset); // Guarda offset do registro atualizado para corrigir seu campo "removido" no final
+    // Retorna para o offset antigo, já que pode ter escrito registro em outra posição no arquivo
+    fseek(data_file, oldOffset, SEEK_SET);
     return 1;
 }
 
@@ -1047,10 +1049,57 @@ long index_binary_search(_index **iarr, int l, int r, int id, int fileType) {
     return index_binary_search(iarr, m+1, r, id, fileType); // Índice é maior
 }
 
-void destroy_iarr(_index **iarr) {
-    int ttl = (int) (sizeof(iarr) / sizeof(_index));
+// Limpa da memória um array de structs índice
+void destroy_iarr(_index **iarr, int ttl) {
     for(int i = 0; i < ttl; i++) {
         free(iarr[i]);
     }
     free(iarr);
+}
+
+// Cria pilha que guardará offset registros atualizados na funcionalidade [8]
+indlist *create_upd_list() {
+    indlist *upd = (indlist*)malloc(sizeof(indlist));
+    assert(upd != NULL);
+    upd->head = NULL;
+    upd->size = 0;
+    return upd;
+}
+
+// Insere offset de registro atualizado na pilha
+int push_upd_list(indlist *upd, long offset) {
+    assert(upd != NULL);
+    _index *i = (_index*)malloc(sizeof(_index));
+    assert(i != NULL);
+    i->byte_offset = offset;
+    i->id = NULL;
+    i->rrn = NULL;
+
+    if(upd->head = NULL) i->prox = NULL;
+    else i->prox = upd->head;
+    upd->head = i;
+    upd->size += 1;
+    return 1;
+}
+
+// Remove elemento da pilha
+int pop_upd_list(indlist *upd) {
+    assert(upd != NULL);
+    if(upd->head == NULL) return 0;
+    _index *aux = upd->head;
+    upd->head = aux->prox;
+    free(aux);
+    upd->size -= 1;
+    return 1;
+}
+
+// Percorre pilha de registros atualizados e corrige sem campo "removido". Também limpa pilha da memória
+int correct_upd_regs(indlist *upd, FILE *data_file) {
+    assert(upd != NULL && data_file != NULL);
+    while(upd->size > 0) {
+        fseek(data_file, upd->head->byte_offset, SEEK_SET);
+        fwrite("0", sizeof(char), 1, data_file);
+        pop_upd_list(upd);
+    }
+    free(upd);
 }
