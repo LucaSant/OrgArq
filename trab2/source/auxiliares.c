@@ -493,7 +493,7 @@ long find_removed_stack_position(FILE *data, long regOffset, int regSize) {
 // Remove um registro de um arquivo de dados
 int rem_register(FILE *data, int fileType, long offset) {
     int aux;
-
+    fseek(data, offset, SEEK_SET);
     // Remove logicamente registro no arquivo de dados e atualiza a pilha de removidos
     fwrite("1", sizeof(char), 1, data);
     if(fileType == 1) {
@@ -506,7 +506,15 @@ int rem_register(FILE *data, int fileType, long offset) {
         fwrite(&rrn, sizeof(int), 1, data);
 
         // Próximo RRN no registro em questão é o antigo topo
-        fseek(data, 182 + (97 * rrn) + 1, SEEK_SET);
+        long rem_offset = (long) ((97 * rrn) + 182);
+        fseek(data, rem_offset+1, SEEK_SET);
+        fwrite(&aux, sizeof(int), 1, data);
+        
+        // Incrementa o número de registros removidos no cabeçalho
+        fseek(data, 178, SEEK_SET);
+        fread(&aux, sizeof(int), 1, data);
+        aux++;
+        fseek(data, -4, SEEK_CUR);
         fwrite(&aux, sizeof(int), 1, data);
 
     } else if(fileType == 2) {
@@ -527,6 +535,13 @@ int rem_register(FILE *data, int fileType, long offset) {
         fwrite(&offset, sizeof(long), 1, data);
         fseek(data, offset+5, SEEK_SET);
         fwrite(&position, sizeof(long), 1, data); // -1 (fim) ou offset do próximo registro removido
+
+        // Incrementa o número de registros removidos no cabeçalho
+        fseek(data, 186, SEEK_SET);
+        fread(&aux, sizeof(int), 1, data);
+        aux++;
+        fseek(data, -4, SEEK_CUR);
+        fwrite(&aux, sizeof(int), 1, data);
     }
 
     return 1;
@@ -671,10 +686,11 @@ int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long
             rem_register(data_file, fileType, offset);
 
             // Checar se existe registro removido que comporte o tamanho. Senão, inserir no fim do arquivo
-            offset = find_added_stack_position(data_file, regSize, fileType);
-            fseek(data_file, offset+1, SEEK_SET);
-            fread(&regSize, sizeof(int), 1, data_file);
-            if(vh->tamanhoRegistro > regSize) offset = eof;
+            offset = find_added_stack_position(data_file, vh->tamanhoRegistro, fileType);
+            //a função find_added... lida com tudo isso abaixo
+            //fseek(data_file, offset+1, SEEK_SET);
+            //fread(&regSize, sizeof(int), 1, data_file);
+            //if(vh->tamanhoRegistro > regSize) offset = eof;
         } else {
             // Caso o novo registro seja menor que o anterior, ajustar tamanho para fins de tratamento de lixo
             vh->tamanhoRegistro = regSize; // Guarda valor do registro anterior, maior que o novo
@@ -868,7 +884,7 @@ void data_reg(FILE *output_file, FILE *input_file, int fileType) {
 }
 
 // Lê um arquivo de dados e passa as informações de seus registros para um array (de arquivo de índice)
-_index **data_to_mem(FILE *data_file, int fileType) {
+_index **data_to_mem(FILE *data_file, int fileType, int *ind_vector_size) {
     fseek(data_file, 0, SEEK_END);
     long eof = ftell(data_file); // Byte offset do fim do arquivo
     int headerSize = fileType == 1 ? 182 : 190;
@@ -927,7 +943,8 @@ _index **data_to_mem(FILE *data_file, int fileType) {
         }
         free(ilist);
         return NULL;
-    }
+    } else *ind_vector_size = ilist->size; // Atualiza o tamanho do vetor de indices (variavel a ser usado fora da função)
+    
 
     // Agora, podemos ordenar a lista encadeada em um array de structs _index
     _index **iarr = (_index**)malloc((ilist->size) * sizeof(_index*));
@@ -954,7 +971,7 @@ _index **data_to_mem(FILE *data_file, int fileType) {
 }
 
 // Lê um arquivo de índice e passa as informações de seus registros para um array
-_index **index_to_mem(FILE *index_file, int fileType) {
+_index **index_to_mem(FILE *index_file, int fileType, int *ind_vector_size) {
     fseek(index_file, 0, SEEK_END);
     long eof = ftell(index_file); // Byte offset do im do arquivo
     int ttl = fileType == 1 ? (int) ((eof-1) / 8) : (int) ((eof-1) / 12); // Número de índices
@@ -970,43 +987,39 @@ _index **index_to_mem(FILE *index_file, int fileType) {
         
         fread(&aux, sizeof(int), 1, index_file);
         ind[i]->id = aux;
-
+        //printf("-> id: %d - ", ind[i]->id );
         if(fileType == 1) {
             fread(&aux, sizeof(int), 1, index_file);
             ind[i]->rrn = aux;
+        //    printf("rrn: %d\n", ind[i]->rrn);
         } else {
             fread(&lAux, sizeof(long), 1, index_file);
             ind[i]->byte_offset = lAux;
+        //    printf("-> %d ", ind[i]->id );
         }
     }
+    *ind_vector_size = ttl;
     
     return ind; // Supõe-se que o array já está ordenado, por vir de um arquivo de índice
 }
 
 // Escreve num arquivo de índice os índices num array ordenados por ID
-int mem_to_index(char *arquivoIndice, _index **iarr, int fileType) {
+int mem_to_index(char *arquivoIndice, _index **iarr, int fileType, int ind_vector_size) {
     FILE *index_file = fopen(get_path(arquivoIndice), "wb+");
-    size_t ttl =  sizeof(iarr) / sizeof(iarr[0]); // NÃO DÁ O RESULTADO CERTO
-    /*
-    printf("tamanho iarr: %d\n", ((int) sizeof(iarr)));
-    printf("primeiro elemento: id: %d, rrn: %d\n", iarr[0]->id, iarr[0]->rrn);
-    printf("tamanho do 0: %d\n", (int) sizeof(iarr[0]));
-    printf("tamanho do 1: %d\n", (int) sizeof(iarr[1]));
-    printf("tamanho do 2: %d\n", (int) sizeof(iarr[2]));
-    printf("ttl: %ld\n", ttl);
-    */
+    int ttl =  ind_vector_size;
+    
     // Cabeçalho
     fwrite("0", sizeof(char), 1, index_file);
 
     // Registros
     for(int i = 0; i < ttl; i++) {
-        printf("ID: %d, ", iarr[i]->id);
+        //printf("ID: %d, ", iarr[i]->id);
         fwrite(&(iarr[i]->id), sizeof(int), 1, index_file);
         if(fileType == 1) {
-            printf("RRN: %d\n", iarr[i]->rrn); // TESTE
+            //printf("RRN: %d\n", iarr[i]->rrn); // TESTE
             fwrite(&(iarr[i]->rrn), sizeof(int), 1, index_file);
         } else {
-            printf("Byte Offset: %ld\n", iarr[i]->byte_offset); // TESTE
+            //printf("Byte Offset: %ld\n", iarr[i]->byte_offset); // TESTE
             fwrite(&(iarr[i]->byte_offset), sizeof(long), 1, index_file);
         }
         free(iarr[i]);
@@ -1024,9 +1037,11 @@ int mem_to_index(char *arquivoIndice, _index **iarr, int fileType) {
 long index_binary_search(_index **iarr, int l, int r, int id, int fileType) {
     if(r < l) return -1; // Índice não existe
     int m = (int) ((r + l) / 2);
+    printf("\nm: %d\n -- offset: %ld", iarr[m]->id, iarr[m]->byte_offset); //TESTE
     if(iarr[m]->id == id) { // Achou índice
-        if(fileType = 1) return (long) ((iarr[m]->rrn * 97) + 182); // RRN para offset
-        else return iarr[m]->byte_offset;
+        printf("é esse\n");
+        if(fileType == 1) { return (long) ((iarr[m]->rrn * 97) + 182); } // RRN para offset
+        else { return iarr[m]->byte_offset; }
     }
     if(iarr[m]->id > id) return index_binary_search(iarr, l, m-1, id, fileType); // Índice é menor
     return index_binary_search(iarr, m+1, r, id, fileType); // Índice é maior
