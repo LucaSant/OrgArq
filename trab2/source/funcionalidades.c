@@ -323,7 +323,6 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
                 vh = reg_to_struct(data_file, fileType);
                 // Se registro não está logicamente removido e condiz com filtro, faz sua atualização
                 if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "1", 1) != 0) {
-                    long x = ftell()
                     upd_register(vh, updt, data_file, fileType, offset, eof);
                 }
                 free(vh);
