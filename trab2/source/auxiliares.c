@@ -687,7 +687,7 @@ int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long
         if(vh->tamanhoRegistro > regSize) {
             // Necessário marcar o registro antigo como removido e inserir o atualizado em nova posição
             rem_register(data_file, fileType, offset);
-
+            
             // Checar se existe registro removido que comporte o tamanho. Senão, inserir no fim do arquivo
             offset = find_added_stack_position(data_file, vh->tamanhoRegistro, fileType);
         } else {
@@ -1072,8 +1072,8 @@ int push_upd_list(indlist *upd, long offset) {
     _index *i = (_index*)malloc(sizeof(_index));
     assert(i != NULL);
     i->byte_offset = offset;
-    i->id = NULL;
-    i->rrn = NULL;
+    i->id = -1;
+    i->rrn = -1;
 
     if(upd->head = NULL) i->prox = NULL;
     else i->prox = upd->head;
