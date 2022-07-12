@@ -9,7 +9,6 @@
 #include <string.h>
 #include <assert.h>
 #include "../headers/auxiliares.h"
-#include "../headers/index_aux.h"
 #include "../headers/funcoesFornecidas.h"
 
 
@@ -365,12 +364,8 @@ int update_vehicle(vehicle *vh, vehicle *update, int fileType) {
 
     // Faz as devidas alterações
 
-    if(strncmp(update->removido, "$", 1) != 0) {
-        if(strncmp(update->removido, "#", 1) == 0) strncpy(vh->removido, "$", 1);
-        // Caractere especial para marcar registro atualizado durante a execução da função
-        // Serve para evitar que registros sejam atualizados múltiplas vezes, erroneamente
-        else strncpy(vh->removido, "2", 1); 
-    }
+    strncpy(vh->removido, "2", 1);
+
     if(update->prox != -1) {
         if(update->prox == -2) vh->prox = -1;
         else vh->prox = update->prox;
@@ -452,7 +447,7 @@ int update_vehicle(vehicle *vh, vehicle *update, int fileType) {
     }
     int len = useful_reg_length(vh, fileType);
     if(fileType == 1 && len > 97) return 0; // Erro (tamanho maior que possível)
-    vh->tamanhoRegistro = fileType == 1 ? 97 : len;
+    vh->tamanhoRegistro = fileType == 1 ? 97 : (len - 5);
     
     return 1;
 }
@@ -481,13 +476,15 @@ long find_removed_stack_position(FILE *data, long regOffset, int regSize) {
     int size;
     fseek(data, 1, SEEK_SET);
     fread(&address, sizeof(long), 1, data);
+    long top = address;
     if(address != -1) {
         do {
             prevAddress = address;
             fseek(data, address+1, SEEK_SET);
             fread(&size, sizeof(int), 1, data);
+            if(size < regSize && prevAddress == top) return -1; // "Novo registro" será o topo da pilha
             fread(&address, sizeof(long), 1, data);
-        } while(address != -1 && size > regSize);
+        } while(address != -1 && size >= regSize);
         return prevAddress; // Reg. imediatamente superior à posição do "novo registro"
     } else return -1; // Pilha vazia
 }
@@ -556,7 +553,7 @@ long find_added_stack_position(FILE *data, int tamReg, int fileType) {
     if(fileType == 1) {
         int rrn;
         fread(&rrn, sizeof(int), 1, data);
-        if(rrn == -1){
+        if(rrn == -1) {
             fseek(data, 174, SEEK_SET);
             fread(&rrn, sizeof(int), 1, data);
         }
@@ -564,14 +561,14 @@ long find_added_stack_position(FILE *data, int tamReg, int fileType) {
     } else if(fileType == 2) {
         long offset;
         fread(&offset, sizeof(long), 1, data);
-        if(offset == -1){
+        if(offset == -1) {
             fseek(data, 178, SEEK_SET);
             fread(&offset, sizeof(long), 1, data);
             return offset;
         } else {
             fseek(data, (offset + 1), SEEK_SET); // Vai até o campo tamanho do registro (campo do registro removido)
             fread(&size, sizeof(int), 1, data);
-            if(size >= tamReg){ // Se o registro novo couber no espaço
+            if(size >= tamReg) { // Se o registro novo couber no espaço
                 return offset; //retorna o byte offset
             } else { // Caso contrário, retorna o byte offset do fim do arquivo
                 fseek(data, 178, SEEK_SET);
@@ -583,7 +580,7 @@ long find_added_stack_position(FILE *data, int tamReg, int fileType) {
 }
 
 // Adiciona um registro em um arquivo de dados (no offset indicado)
-int add_register(vehicle *vh, FILE *data, int fileType, long offset) {
+int add_register(vehicle *vh, FILE *data, int fileType, long offset, long oldOffset) {
     int size = 97; // Tamanho do registro tipo1. Caso tipo2, valor será sobrescrito
     int rm_rrn; // Proximo rrn do registro removido 
     long rm_offset; // Proximo byte offset do registro removido
@@ -592,8 +589,9 @@ int add_register(vehicle *vh, FILE *data, int fileType, long offset) {
     int rrn;
     if(eof != offset) fseek(data, offset, SEEK_SET); 
 
-    // Escreve registro no offset indicado
-    fwrite("0", sizeof(char), 1, data); // removido
+    // Removido
+    if(strncmp(vh->removido, "2", 1) == 0) fwrite(&vh->removido, sizeof(char), 1, data);
+    else fwrite("0", sizeof(char), 1, data);
 
 
     // Essa seção do registro varia a depender to tipo de arquivo
@@ -610,10 +608,9 @@ int add_register(vehicle *vh, FILE *data, int fileType, long offset) {
             fread(&rm_offset, sizeof(long), 1, data); // Lẽ o endereço do próximo registro de removido
             fseek(data, (offset + 1), SEEK_SET); // Volta os campos tamanho e próximo byte offset para sobrescrever
         } else { // Insere no fim do arquivo
-            size = vh->tamanhoRegistro - 5; // Insere no final do arquivo
+            size = vh->tamanhoRegistro;
         }
 
-        //int aux = (int) vh->tamanhoRegistro;
         fwrite(&size, sizeof(int), 1, data); // tamanhoRegistro
         fwrite(&vh->prox, sizeof(long), 1, data); // prox
     }
@@ -647,7 +644,7 @@ int add_register(vehicle *vh, FILE *data, int fileType, long offset) {
     // Atualiza o cabeçalho, se necessário
     if(eof == offset) { // Caso 1: adicionado no fim do arquivo
         long next_offset = ftell(data); // Fim do arquivo
-        if(fileType == 1){
+        if(fileType == 1) {
             int next_rrn = (int) ((next_offset - 182) / 97);
             fseek(data, 174, SEEK_SET);
             fwrite(&next_rrn, sizeof(int), 1, data);
@@ -656,23 +653,23 @@ int add_register(vehicle *vh, FILE *data, int fileType, long offset) {
             fwrite(&next_offset, sizeof(long), 1, data);
         }
     } else { // Caso 2: adicionado no espaço de um registro removido
-        int num_rm; // Número de registros removidos
-        if(fileType == 1){ 
-            fseek(data, 1, SEEK_SET);
-            fwrite(&rm_rrn, sizeof(int), 1, data);
-            fseek(data, 178, SEEK_SET);
-            fread(&num_rm, sizeof(int), 1, data); // Lê o número de registros removidos
-            num_rm--;
-            fseek(data, -4, SEEK_CUR);
-            fwrite(&num_rm, sizeof(int), 1, data);
-        } else {
-            fseek(data, 1, SEEK_SET);
-            fwrite(&rm_offset, sizeof(long), 1, data);
-            fseek(data, 186, SEEK_SET);
+        if(strncmp(vh->removido, "2", 1) != 0 || offset != oldOffset) {
+            if(fileType == 1) { 
+                fseek(data, 1, SEEK_SET);
+                fwrite(&rm_rrn, sizeof(int), 1, data);
+                fseek(data, 178, SEEK_SET);
+            } else {
+                fseek(data, 1, SEEK_SET);
+                fwrite(&rm_offset, sizeof(long), 1, data);
+                fseek(data, 186, SEEK_SET);
+            }
+            int num_rm; // Número de registros removidos
             fread(&num_rm, sizeof(int), 1, data);
-            num_rm--;
-            fseek(data, -4, SEEK_CUR);
-            fwrite(&num_rm, sizeof(int), 1, data);
+            if(num_rm > 0) {
+                num_rm--;
+                fseek(data, -4, SEEK_CUR);
+                fwrite(&num_rm, sizeof(int), 1, data);
+            }
         }
     }
     
@@ -682,21 +679,19 @@ int add_register(vehicle *vh, FILE *data, int fileType, long offset) {
 int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long offset, long eof, indlist *updated_regs) {
     long oldOffset = offset;
     int regSize = vh->tamanhoRegistro; // Tamanho do registro antes de atualizar
-    update_vehicle(vh, updt, fileType);
+    if(update_vehicle(vh, updt, fileType) == 0) return 0; // Atualiza registro enquanto na memória
     if(fileType == 2) { // Registros de tamanho variável
         if(vh->tamanhoRegistro > regSize) {
             // Necessário marcar o registro antigo como removido e inserir o atualizado em nova posição
             rem_register(data_file, fileType, offset);
-            
             // Checar se existe registro removido que comporte o tamanho. Senão, inserir no fim do arquivo
             offset = find_added_stack_position(data_file, vh->tamanhoRegistro, fileType);
-        } else {
-            // Caso o novo registro seja menor que o anterior, ajustar tamanho para fins de tratamento de lixo
+        } else { // Caso o novo registro seja menor que o anterior, ajustar tamanho para fins de tratamento de lixo
             vh->tamanhoRegistro = regSize; // Guarda valor do registro anterior, maior que o novo
         }
     }
     // Irá (a) sobrescrever o registro antigo, (b) sobrescrever outro registro removido ou (c) ser escrito no final
-    add_register(vh, data_file, fileType, offset);
+    add_register(vh, data_file, fileType, offset, oldOffset);
     push_upd_list(updated_regs, offset); // Guarda offset do registro atualizado para corrigir seu campo "removido" no final
     // Retorna para o offset antigo, já que pode ter escrito registro em outra posição no arquivo
     fseek(data_file, oldOffset, SEEK_SET);
@@ -1039,9 +1034,9 @@ int mem_to_index(char *arquivoIndice, _index **iarr, int fileType, int ind_vecto
 long index_binary_search(_index **iarr, int l, int r, int id, int fileType) {
     if(r < l) return -1; // Índice não existe
     int m = (int) ((r + l) / 2);
-    printf("\nm: %d\n -- offset: %ld", iarr[m]->id, iarr[m]->byte_offset); //TESTE
+    //printf("\nm: %d\n -- offset: %ld", iarr[m]->id, iarr[m]->byte_offset); //TESTE
     if(iarr[m]->id == id) { // Achou índice
-        printf("é esse\n");
+        //printf("é esse\n");
         if(fileType == 1) { return (long) ((iarr[m]->rrn * 97) + 182); } // RRN para offset
         else { return iarr[m]->byte_offset; }
     }
@@ -1075,7 +1070,7 @@ int push_upd_list(indlist *upd, long offset) {
     i->id = -1;
     i->rrn = -1;
 
-    if(upd->head = NULL) i->prox = NULL;
+    if(upd->head == NULL) i->prox = NULL;
     else i->prox = upd->head;
     upd->head = i;
     upd->size += 1;

@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../headers/auxiliares.h"
-#include "../headers/index_aux.h"
 #include "../headers/funcionalidades.h"
 #include "../headers/structs.h"
 #include "../headers/funcoesFornecidas.h"
@@ -162,10 +161,11 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
     fwrite("0", sizeof(char), 1, index_file); // Consistência
 
     vehicle *filtro; // Filtro de busca
+    vehicle *vh; // Contém as informações do registro a ser removido
     // Para busca binária
     int num_ind = 0;
     _index **arr = index_to_mem(index_file, fileType, &num_ind);
-    long eof, offset = 0;
+    long eof, offset;
     
 
     // Para cada remoção...
@@ -173,15 +173,13 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
         filtro = field_to_struct();
         // Para cada filtro, pesquisar no arquivo e fazer as devidas remoções
         if(filtro->id != -1) { // Busca usando arquivo de índice
-            //printf("id: %d\n", filtro->id);
+
             offset = index_binary_search(arr, 0, num_ind-1, filtro->id, fileType);
-            //fseek(data_file, offset, SEEK_SET);
-            //printf("offset: %ld \n", offset);
-            if(offset != -1){
-                vehicle *vh;
-                printf("removeu +1 por id\n");
+            if(offset != -1) { // Encontrou registro com esse ID
                 fseek(data_file, offset, SEEK_SET);
                 vh = reg_to_struct(data_file, fileType);
+                
+                // Se registro não está logicamente removido e condiz com filtro, faz sua remoção
                 if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "1", 1) != 0) {
                     rem_register(data_file, fileType, offset);
                 }
@@ -191,16 +189,12 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
             fseek(data_file, 0, SEEK_END);
             eof = ftell(data_file); // Byte offset no fim do arquivo
             fseek(data_file, headerSize, SEEK_SET);
-            vehicle *vh;
 
             while(ftell(data_file) < eof) {
                 offset = ftell(data_file);
                 vh = reg_to_struct(data_file, fileType);
                 // Se registro não está logicamente removido e condiz com filtro, faz sua remoção
                 if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "1", 1) != 0) {
-                    printf("offset: %ld\n", offset);
-                    printf("removeu +1\n");
-                    //fseek(data_file, offset, SEEK_SET); // PRECISA DISSO??
                     rem_register(data_file, fileType, offset);
                 }
                 free(vh);
@@ -230,6 +224,7 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
 
 // Funcionalidade [7]: Fazer inserção de registro em arquivo seguindo abordagem dinâmica e Worst Fit
 int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
+    long aux = -1;
     int fileType = get_tipo_arquivo(tipoArquivo);
     if(fileType == 0) return 0; // Ero (tipo errado)
 
@@ -248,10 +243,10 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
     // Para cada inserção...
     for(int i = 0; i < n; i++) {
         vh = vh_from_input(); // Adquire informações do registro com input
-        vh->tamanhoRegistro = useful_reg_length(vh, fileType); // calcula o tamanho do registro
-        offset = find_added_stack_position(data_file, vh->tamanhoRegistro, fileType);
+        vh->tamanhoRegistro = useful_reg_length(vh, fileType) - 5; // calcula o tamanho do registro
+        offset = find_added_stack_position(data_file, (vh->tamanhoRegistro) + 5, fileType);
         if(fileType == 1) offset = (offset * 97) + 182; // De RRN para byte offset
-        add_register(vh, data_file, fileType, offset); // Insere o registro    
+        add_register(vh, data_file, fileType, offset, aux); // Insere o registro    
         free(vh);
     }
 
@@ -290,17 +285,19 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
 
     vehicle *filtro; // Filtro de busca
     vehicle *updt; // Contém campos a se atualizar no vetor
+    vehicle *vh; // Contém infos do registro a ser atualizado
+    long eof, offset;
+
     indlist *updated_regs = create_upd_list(); // Contém endereços dos registros atualizados
+    
     // Para busca binária
     int num_ind = 0;
     _index **arr = index_to_mem(index_file, fileType, &num_ind);
-    long eof, offset;
 
     // Para cada atualização...
     for(int i = 0; i < n; i++) {
         filtro = field_to_struct();
         updt = field_to_struct();
-        vehicle *vh;
         
         // Para cada filtro, pesquisar no arquivo e fazer as devidas atualizações
         if(filtro->id != -1) { // Busca usando arquivo de índice
@@ -309,7 +306,7 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
                 fseek(data_file, offset, SEEK_SET);
                 vh = reg_to_struct(data_file, fileType);
                 if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "0", 1) == 0) {
-                    upd_register(vh, updt, data_file, fileType, offset, eof, updated_regs);
+                    if(upd_register(vh, updt, data_file, fileType, offset, eof, updated_regs) == 0) return 0;
                 }
                 free(vh);
             }
@@ -323,8 +320,8 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
                 offset = ftell(data_file);
                 vh = reg_to_struct(data_file, fileType);
                 // Se registro não está logicamente removido e condiz com filtro, faz sua atualização
-                if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "1", 1) != 0) {
-                    upd_register(vh, updt, data_file, fileType, offset, eof, updated_regs);
+                if(filter_cmp(filtro, vh) == 1 && strncmp(vh->removido, "0", 1) == 0) {
+                    if(upd_register(vh, updt, data_file, fileType, offset, eof, updated_regs) == 0) return 0;
                 }
                 free(vh);
             }
@@ -334,7 +331,7 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
     }
 
     // Limpa/corrige o que for necessário e atualiza o arquivo de índice
-    int correct_upd_regs(indlist *upd, FILE *data_file);
+    correct_upd_regs(updated_regs ,data_file);
 
     destroy_iarr(arr, num_ind);
     fseek(index_file, 0, SEEK_SET);

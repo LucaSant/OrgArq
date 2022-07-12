@@ -24,7 +24,7 @@ int update_vehicle(vehicle *vh, vehicle *update, int fileType);
 vehicle *field_to_struct();
 long find_removed_stack_position(FILE *data, long regOffset, int regSize);
 int rem_register(FILE *data, int fileType, long regAddress);
-int add_register(vehicle *vh, FILE *data, int fileType, long offset);
+int add_register(vehicle *vh, FILE *data, int fileType, long offset, long oldOffset);
 int upd_register(vehicle *vh, vehicle *updt, FILE *data_file, int fileType, long offset, long eof, indlist *updated_regs);
 long find_added_stack_position(FILE *data, int tamReg, int fileType);
 
