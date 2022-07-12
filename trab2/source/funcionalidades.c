@@ -20,8 +20,8 @@ int csv_to_bin(char *tipoArquivo, char *arquivoEntrada) {
 
     char arquivoSaida[31];
     scanf("%s", arquivoSaida);
-    FILE *input_file = fopen(get_path(arquivoEntrada), "r");
-    FILE *output_file = fopen(get_path(arquivoSaida), "wb+");
+    FILE *input_file = fopen(arquivoEntrada, "r");
+    FILE *output_file = fopen(arquivoSaida, "wb+");
 
     int header = create_header(output_file, fileType); // Cria cabeçalho do arquivo com base no tipo
     if(!header) return 0; // Erro
@@ -29,7 +29,7 @@ int csv_to_bin(char *tipoArquivo, char *arquivoEntrada) {
 
     fclose(input_file);
     fclose(output_file);
-    binarioNaTela(get_path(arquivoSaida));
+    binarioNaTela(arquivoSaida);
     return 1;
 }
 
@@ -38,7 +38,7 @@ int read_all(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
     if(fileType == 0) return 0; // Ero (tipo errado)
 
-    FILE *input_file = fopen(get_path(arquivoEntrada), "rb");
+    FILE *input_file = fopen(arquivoEntrada, "rb");
     if(input_file == NULL) {
         return 0; // Erro (não há arquivo)
     }
@@ -65,7 +65,7 @@ int read_filter(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
     if(fileType == 0) return 0; // Ero (tipo errado)
 
-    FILE *input_file = fopen(get_path(arquivoEntrada), "rb");
+    FILE *input_file = fopen(arquivoEntrada, "rb");
     if(input_file == NULL) return 0; // Erro (não há arquivo)
 
     char status[1];
@@ -96,7 +96,7 @@ int read_rrn(char *tipoArquivo, char *arquivoEntrada) {
     int fileType = get_tipo_arquivo(tipoArquivo);
     if(fileType != 1) return 0; // Erro (tipo errado)
 
-    FILE *input_file = fopen(get_path(arquivoEntrada), "rb");
+    FILE *input_file = fopen(arquivoEntrada, "rb");
     if(input_file == NULL) return 0; // Erro (não há arquivo)
 
     char status[1];
@@ -129,7 +129,7 @@ int create_index(char *tipoArquivo, char* arquivoEntrada){
 
     char arquivoIndice[31];
     scanf("%s", arquivoIndice);
-    FILE *data_file = fopen(get_path(arquivoEntrada), "rb+");
+    FILE *data_file = fopen(arquivoEntrada, "rb+");
     fwrite("0", sizeof(char), 1, data_file); // Consistência
     
     // Passa as informações para a memória e depois escreve-as num arquivo de índice
@@ -141,7 +141,7 @@ int create_index(char *tipoArquivo, char* arquivoEntrada){
     fwrite("1", sizeof(char), 1, data_file); // Consistência
     fclose(data_file);
     
-    binarioNaTela(get_path(arquivoIndice));
+    binarioNaTela(arquivoIndice);
     return 1;
 }
 
@@ -155,9 +155,9 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
     int n; // Número de remoções
     scanf("%s %d", arquivoIndice, &n);
 
-    FILE *data_file = fopen(get_path(arquivoEntrada), "rb+");
+    FILE *data_file = fopen(arquivoEntrada, "rb+");
     fwrite("0", sizeof(char), 1, data_file); // Consistência
-    FILE *index_file = fopen(get_path(arquivoIndice), "rb+");
+    FILE *index_file = fopen(arquivoIndice, "rb+");
     fwrite("0", sizeof(char), 1, index_file); // Consistência
 
     vehicle *filtro; // Filtro de busca
@@ -217,8 +217,8 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
     fwrite("1", sizeof(char), 1, data_file); // Consistência
     fclose(data_file);
     
-    binarioNaTela(get_path(arquivoEntrada));
-    binarioNaTela(get_path(arquivoIndice));
+    binarioNaTela(arquivoEntrada);
+    binarioNaTela(arquivoIndice);
     return 1;
 }
 
@@ -232,9 +232,9 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
     int n; // Número de inserções
     scanf("%s %d", arquivoIndice, &n);
 
-    FILE *data_file = fopen(get_path(arquivoEntrada), "rb+");
+    FILE *data_file = fopen(arquivoEntrada, "rb+");
     fwrite("0", sizeof(char), 1, data_file); // Consistência
-    FILE *index_file = fopen(get_path(arquivoIndice), "rb+");
+    FILE *index_file = fopen(arquivoIndice, "rb+");
     fwrite("0", sizeof(char), 1, index_file); // Consistência
 
     vehicle *vh; // Contém info do registro a ser inserido
@@ -263,8 +263,8 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
     fwrite("1", sizeof(char), 1, data_file); // Consistência
     fclose(data_file);
 
-    binarioNaTela(get_path(arquivoEntrada));
-    binarioNaTela(get_path(arquivoIndice));
+    binarioNaTela(arquivoEntrada);
+    binarioNaTela(arquivoIndice);
     return 1;
 }
 
@@ -278,9 +278,9 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
     int n; // Número de atualizações
     scanf("%s %d", arquivoIndice, &n);
 
-    FILE *data_file = fopen(get_path(arquivoEntrada), "rb+");
+    FILE *data_file = fopen(arquivoEntrada, "rb+");
     fwrite("0", sizeof(char), 1, data_file); // Consistência
-    FILE *index_file = fopen(get_path(arquivoIndice), "rb+");
+    FILE *index_file = fopen(arquivoIndice, "rb+");
     fwrite("0", sizeof(char), 1, index_file); // Consistência
 
     vehicle *filtro; // Filtro de busca
@@ -346,7 +346,7 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
     fwrite("1", sizeof(char), 1, data_file); // Consistência
     fclose(data_file);
 
-    binarioNaTela(get_path(arquivoEntrada));
-    binarioNaTela(get_path(arquivoIndice));
+    binarioNaTela(arquivoEntrada);
+    binarioNaTela(arquivoIndice);
     return 1;
 }

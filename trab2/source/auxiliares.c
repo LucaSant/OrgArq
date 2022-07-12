@@ -1002,7 +1002,7 @@ _index **index_to_mem(FILE *index_file, int fileType, int *ind_vector_size) {
 
 // Escreve num arquivo de índice os índices num array ordenados por ID
 int mem_to_index(char *arquivoIndice, _index **iarr, int fileType, int ind_vector_size) {
-    FILE *index_file = fopen(get_path(arquivoIndice), "wb+");
+    FILE *index_file = fopen(arquivoIndice, "wb+");
     int ttl =  ind_vector_size;
     
     // Cabeçalho
