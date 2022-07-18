@@ -58,6 +58,30 @@ int tratamento_de_lixo(char *src, char *dest, int size) {
     return 1;
 }
 
+_index **index_sort(indlist *ilist) {
+    _index **iarr = (_index**)malloc((ilist->size) * sizeof(_index*));
+    int i = 0;
+    _index *aux, *lowest, *ant = NULL;
+    while(ilist->size > 0) {
+        aux = lowest = ilist->head; // lowest guardará o menor índice, aux percorrerá a lista encadeada
+        ant = NULL;
+        while(aux->prox != NULL) {
+            if(aux->prox->id < lowest->id) {
+                lowest = aux->prox;
+                ant = aux;
+            }
+            aux = aux->prox;
+        }
+        // Remove da lista encadeada e insere no array
+        if(ant) ant->prox = lowest->prox;
+        else ilist->head = lowest->prox; // Menor índice está no início da lista encadeada
+        ilist->size -= 1;
+        iarr[i] = lowest;
+        i++;
+    }
+    free(ilist);
+}
+
 // Cria instância de struct vehicle para guardar dados de um registro
 vehicle *cria_veiculo() {
     vehicle *vh = (vehicle*)malloc(sizeof(vehicle));
@@ -881,7 +905,7 @@ void data_reg(FILE *output_file, FILE *input_file, int fileType) {
 }
 
 // Lê um arquivo de dados e passa as informações de seus registros para um array (de arquivo de índice)
-_index **data_to_mem(FILE *data_file, int fileType, int *ind_vector_size) {
+indlist *data_to_mem(FILE *data_file, int fileType) {
     fseek(data_file, 0, SEEK_END);
     long eof = ftell(data_file); // Byte offset do fim do arquivo
     int headerSize = fileType == 1 ? 182 : 190;
@@ -940,9 +964,9 @@ _index **data_to_mem(FILE *data_file, int fileType, int *ind_vector_size) {
         }
         free(ilist);
         return NULL;
-    } else *ind_vector_size = ilist->size; // Atualiza o tamanho do vetor de indices (variavel a ser usado fora da função)
+    }
     
-
+    /*
     // Agora, podemos ordenar a lista encadeada em um array de structs _index
     _index **iarr = (_index**)malloc((ilist->size) * sizeof(_index*));
     int i = 0;
@@ -964,7 +988,9 @@ _index **data_to_mem(FILE *data_file, int fileType, int *ind_vector_size) {
         i++;
     }
     free(ilist);
-    return iarr; // Array com todos os structs index que estavam na lista encadeada, agora ordenados
+    */
+
+    return ilist; // Array com todos os structs index que estavam na lista encadeada, agora ordenados
 }
 
 // Lê um arquivo de índice e passa as informações de seus registros para um array

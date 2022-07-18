@@ -11,7 +11,7 @@
 #include "../headers/funcionalidades.h"
 #include "../headers/structs.h"
 #include "../headers/funcoesFornecidas.h"
-
+#include "../headers/arvore_b.h"
 
 // Funcionalidade [1]: Ler registros a partir de um arquivo CSV e salvá-los em um arquivo binário tipo1 ou tipo2
 int csv_to_bin(char *tipoArquivo, char *arquivoEntrada) {
@@ -133,8 +133,10 @@ int create_index(char *tipoArquivo, char* arquivoEntrada){
     fwrite("0", sizeof(char), 1, data_file); // Consistência
     
     // Passa as informações para a memória e depois escreve-as num arquivo de índice
-    int num_ind = 0;
-    _index **arr = data_to_mem(data_file, fileType, &num_ind);
+    
+    indlist *ilist = data_to_mem(data_file, fileType);
+    int num_ind = ilist->size;
+    _index **arr = index_sort(ilist);
     mem_to_index(arquivoIndice, arr, fileType, num_ind);
     
     fseek(data_file, 0, SEEK_SET);
@@ -210,7 +212,9 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
     fclose(index_file);
 
     num_ind = 0;
-    arr = data_to_mem(data_file, fileType, &num_ind);
+    indlist *ilist = data_to_mem(data_file, fileType);
+    num_ind = ilist->size;
+    arr = index_sort(ilist);
     mem_to_index(arquivoIndice, arr, fileType, num_ind);
 
     fseek(data_file, 0, SEEK_SET);
@@ -255,8 +259,10 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
     fwrite("1", sizeof(char), 1, index_file); // Consistência
     fclose(index_file);
 
-    int num_ind = 0;
-    _index **arr = data_to_mem(data_file, fileType, &num_ind);
+    
+    indlist *ilist = data_to_mem(data_file, fileType);
+    int num_ind = ilist->size;
+    _index **arr = index_sort(ilist);
     mem_to_index(arquivoIndice, arr, fileType, num_ind);
 
     fseek(data_file, 0, SEEK_SET);
@@ -338,8 +344,10 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
     fwrite("1", sizeof(char), 1, index_file); // Consistência
     fclose(index_file);
 
-    num_ind = 0;
-    arr = data_to_mem(data_file, fileType, &num_ind);
+    
+    indlist *ilist = data_to_mem(data_file, fileType);
+    num_ind = ilist->size;
+    arr = index_sort(ilist);
     mem_to_index(arquivoIndice, arr, fileType, num_ind);
 
     fseek(data_file, 0, SEEK_SET);
@@ -347,6 +355,45 @@ int update_reg(char *tipoArquivo, char *arquivoEntrada) {
     fclose(data_file);
 
     binarioNaTela(arquivoEntrada);
+    binarioNaTela(arquivoIndice);
+    return 1;
+}
+
+
+// Funcionalidade [9]: ---
+int create_index_btree(char *tipoArquivo, char* arquivoEntrada, int order) {
+    int fileType = get_tipo_arquivo(tipoArquivo);
+    if(fileType == 0) return 0; // Erro (tipo errado)
+
+    char arquivoIndice[31];
+    scanf("%s", arquivoIndice);
+    b_tree *bt = create_btree(4, arquivoIndice); // Cria a árvore B
+    node *root = create_node(order, '0', fileType); // Cria o nó raiz | tipo de nó igual a 0
+    add_node_to_btree(bt, root); // Adiciona o nó raiz
+    FILE *data_file = fopen(arquivoEntrada, "rb+");
+    fwrite("0", sizeof(char), 1, data_file); // Consistência
+    
+    // Passa as informações para a memória e depois escreve-as num arquivo de índice
+    
+    indlist *ilist= data_to_mem(data_file, fileType);
+    int num_ind = ilist->size;
+    // Transfere os indices de lista para array
+    _index **arr = (_index**)malloc((ilist->size) * sizeof(_index*));
+    int i = 0;
+    while(ilist->size > 0) {
+        arr[i] = ilist->head;
+        ilist->head = ilist->head->prox;
+        ilist->size--;
+        i++;
+    }
+    free(ilist);
+    mem_to_btree(bt, arr, fileType, num_ind);
+    
+    // Finalizando processo
+    fseek(data_file, 0, SEEK_SET);
+    fwrite("1", sizeof(char), 1, data_file); // Consistência
+    free(bt->root);
+    free(bt);
     binarioNaTela(arquivoIndice);
     return 1;
 }

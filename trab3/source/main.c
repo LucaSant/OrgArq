@@ -39,6 +39,8 @@ int main() {
         case 8: // Fazer atualização de registros em arquivo seguindo abordagem dinâmica 
             res = update_reg(tipoArquivo, arquivoEntrada);
             break;
+        case 9: //
+            res = create_index_btree(tipoArquivo, arquivoEntrada, 4);
         default:
             printf("Comando invalido! Deve estar entre 1 e 8\n");
             break;

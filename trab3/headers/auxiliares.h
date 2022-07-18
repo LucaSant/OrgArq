@@ -34,8 +34,9 @@ vehicle *parse_data(char *line);
 int useful_reg_length(vehicle *reg, int fileType);
 void data_reg(FILE *input_file, FILE *output_file, int fileType);
 
-_index **data_to_mem(FILE *data_file, int fileType, int *ind_vector_size);
+indlist *data_to_mem(FILE *data_file, int fileType);
 _index **index_to_mem(FILE *index_file, int fileType, int *ind_vector_size);
+_index **index_sort(indlist *ilist);
 int mem_to_index(char *arquivoIndice, _index **iarr, int fileType, int ind_vector_size);
 long index_binary_search(_index **iarr, int l, int r, int id, int fileType);
 void destroy_iarr(_index **iarr, int ttl);
