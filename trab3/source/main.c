@@ -41,8 +41,15 @@ int main() {
             break;
         case 9: //
             res = create_index_btree(tipoArquivo, arquivoEntrada, 4);
+            break;
+        case 10: //
+            res = search_btree(tipoArquivo, arquivoEntrada, 4);
+            break;
+        case 11: //
+            res = insert_reg_btree(tipoArquivo, arquivoEntrada, 4);
+            break;
         default:
-            printf("Comando invalido! Deve estar entre 1 e 8\n");
+            printf("Comando invalido! Deve estar entre 1 e 11\n");
             break;
     }
     if (res == 0) printf("Falha no processamento do arquivo.\n");

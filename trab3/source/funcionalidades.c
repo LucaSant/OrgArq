@@ -205,7 +205,7 @@ int remove_reg(char *tipoArquivo, char *arquivoEntrada) {
         free(filtro);
     }
 
-    // Limpa o que for necessário e tualiza o arquivo de índice
+    // Limpa o que for necessário e atualiza o arquivo de índice
     destroy_iarr(arr, num_ind);
     fseek(index_file, 0, SEEK_SET);
     fwrite("1", sizeof(char), 1, index_file); // Consistência
@@ -250,7 +250,7 @@ int insert_reg(char *tipoArquivo, char *arquivoEntrada) {
         vh->tamanhoRegistro = useful_reg_length(vh, fileType) - 5; // calcula o tamanho do registro
         offset = find_added_stack_position(data_file, (vh->tamanhoRegistro) + 5, fileType);
         if(fileType == 1) offset = (offset * 97) + 182; // De RRN para byte offset
-        add_register(vh, data_file, fileType, offset, aux); // Insere o registro    
+        add_register(vh, data_file, fileType, offset, aux); // Insere o registro 
         free(vh);
     }
 
@@ -380,20 +380,99 @@ int create_index_btree(char *tipoArquivo, char* arquivoEntrada, int order) {
     // Transfere os indices de lista para array
     _index **arr = (_index**)malloc((ilist->size) * sizeof(_index*));
     int i = 0;
+    int tamanho = ilist->size;
     while(ilist->size > 0) {
         arr[i] = ilist->head;
         ilist->head = ilist->head->prox;
         ilist->size--;
         i++;
     }
+
     free(ilist);
     mem_to_btree(bt, arr, fileType, num_ind);
-    
     // Finalizando processo
     fseek(data_file, 0, SEEK_SET);
     fwrite("1", sizeof(char), 1, data_file); // Consistência
     free(bt->root);
     free(bt);
+    binarioNaTela(arquivoIndice);
+    return 1;
+}
+
+
+int search_btree(char *tipoArquivo, char* arquivoEntrada, int order) {
+    int fileType = get_tipo_arquivo(tipoArquivo);
+    if(fileType == 0) return 0; // Erro (tipo errado)
+
+    char arquivoIndice[31];
+    char id[3];
+    int id_value;
+    scanf("%s %s %d", arquivoIndice, id, &id_value);
+    if(strncmp(id, "id", 2) != 0) return 0;
+
+    FILE *data_file = fopen(arquivoEntrada, "rb+");
+    fwrite("0", sizeof(char), 1, data_file); // Consistência
+    b_tree *bt = read_btree(4, arquivoIndice, fileType); // Lê a árvore B a partir do arquivo]
+
+    long addr = find_in_btree(bt, bt->root->node_rrn, id_value, fileType);
+    //printf("rrn: %ld\n", addr);
+    if(fileType == 1) addr = 182 + (97*addr);
+    fseek(data_file, addr, SEEK_SET);
+    vehicle *reg = reg_to_struct(data_file, fileType);
+    print_reg(reg);
+    fseek(data_file, 0, SEEK_SET);
+    fseek(bt->file, 0, SEEK_SET);
+    fwrite("1", sizeof(char), 1, data_file); // Consistência arquivo de dados
+    fwrite("1", sizeof(char), 1, bt->file); // Consistência arquivo de indice 
+    fclose(data_file);
+    fclose(bt->file);
+    free(bt);
+    return 1;
+}
+
+int insert_reg_btree(char *tipoArquivo, char* arquivoEntrada, int order) {
+    long aux = -1;
+    int fileType = get_tipo_arquivo(tipoArquivo);
+    if(fileType == 0) return 0; // Erro (tipo errado)
+
+    char arquivoIndice[31];
+    int n; // Número de inserções
+    scanf("%s %d", arquivoIndice, &n);
+
+    FILE *data_file = fopen(arquivoEntrada, "rb+");
+    fwrite("0", sizeof(char), 1, data_file); // Consistência
+    b_tree *bt = read_btree(4, arquivoIndice, fileType); // Lê a árvore B a partir do arquivo
+
+    vehicle *vh; // Contém info do registro a ser inserido
+    long offset;
+    _index **arr = (_index**)malloc(n*sizeof(_index*));
+ 
+    // Para cada inserção...
+    for(int i = 0; i < n; i++) {
+        vh = vh_from_input(); // Adquire informações do registro com input
+        vh->tamanhoRegistro = useful_reg_length(vh, fileType) - 5; // calcula o tamanho do registro
+        offset = find_added_stack_position(data_file, (vh->tamanhoRegistro) + 5, fileType);
+        arr[i] = (_index*)malloc(sizeof(_index));
+        arr[i]->id = vh->id;
+
+        if(fileType == 1) {
+            arr[i]->rrn = (int) offset;
+            offset = (offset * 97) + 182; // De RRN para byte offset
+        } else { 
+            arr[i]->byte_offset = offset; 
+        }
+        add_register(vh, data_file, fileType, offset, aux); // Insere o registro
+        free(vh);
+    }
+    mem_to_btree(bt, arr, fileType, n);
+    // Limpa o que for necessário e tualiza o arquivo de índice
+
+    fseek(data_file, 0, SEEK_SET);
+    fwrite("1", sizeof(char), 1, data_file); // Consistência
+    fclose(data_file);
+    free(bt->root);
+    free(bt);
+    binarioNaTela(arquivoEntrada);
     binarioNaTela(arquivoIndice);
     return 1;
 }
